@@ -1,0 +1,37 @@
+---
+import { Image } from "astro:assets";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { getPhotoColumns } from "../data/photos";
+
+const photoColumns = await getPhotoColumns();
+let lightboxIndex = 0;
+---
+
+<BaseLayout title="Photos" activeSlug="photos" description="Film photography by Andrew Appel.">
+  <section class="photos-page">
+    <p class="photos-intro">
+      Here are some photos I took. They were all shot on film, mostly with my Nikon F75. I like that camera because it was released the same month that I was born. It also has autofocus, which is super handy for getting those quick shots.
+    </p>
+    <div class="photo-grid">
+      {photoColumns.map((column) => (
+        <div class="photo-column">
+          {column.map((photo) => {
+            const index = lightboxIndex++;
+            return (
+              <a href={photo.data.image.src} class="photo-link" aria-label={`Open ${photo.data.title}`} data-lightbox-item data-lightbox-index={index}>
+                <Image
+                  src={photo.data.image}
+                  alt={photo.data.alt ?? photo.data.title}
+                  widths={[360, 520, 760, 1080]}
+                  sizes="(max-width: 760px) 100vw, 33vw"
+                  loading={index < 6 ? "eager" : "lazy"}
+                  decoding="async"
+                />
+              </a>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  </section>
+</BaseLayout>

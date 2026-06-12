@@ -1,0 +1,42 @@
+---
+title: "Ripple"
+slug: "ripple"
+subtitle: "Productivity-focused management & operations PDA."
+year: 2025
+order: 30
+thumbnail: "./thumbnail.png"
+home:
+  show: true
+  order: 30
+frame:
+  type: "image"
+  image: "./thumbnail.png"
+  alt: "Ripple handheld operations PDA concept."
+taxonomy:
+  format:
+    - "Physical product"
+    - "Web/app interface"
+    - "Service concept"
+  status:
+    - "Concept"
+  disciplines:
+    - "Industrial design"
+    - "UI/UX optimization"
+    - "Website/app development"
+    - "Service systems"
+  genres:
+    - "Consumer electronics"
+    - "Industrial tools"
+info:
+  date: "May 2025"
+  locationClient: "Brunel University London"
+  notes:
+    - text: "Module: Human Factors (Year 3)."
+portfolioLink: true
+---
+
+Ripple is a concept for a handheld PDA (personal digital assistant) designed to provide better support for retail employees and managers in daily store operations.
+
+Focusing on core functions like inventory management, pricing, customer assistance, and task coordination, the design emphasizes single-handed usability, intuitive navigation, and ergonomic efficiency. It also contains stereoscopic LiDAR sensors for better spatial tracking.
+
+The solution streamlines workflows to reduce physical and cognitive strain in fast-paced retail environments.

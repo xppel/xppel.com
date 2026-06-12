@@ -1,0 +1,185 @@
+---
+import SiteChrome from "../components/SiteChrome.astro";
+import Icon from "../components/Icon.astro";
+import { site } from "../data/site";
+import "../styles/global.css";
+
+type Props = {
+  title?: string;
+  description?: string;
+  activeSlug?: string;
+};
+
+const {
+  title = site.title,
+  description = site.description,
+  activeSlug = ""
+} = Astro.props;
+
+const pageTitle = title === site.title ? site.title : `${title} | ${site.title}`;
+const footerCounts = [5, 5, 5, 5, 4, 4, 4, 4, 3, 3, 3, 3, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5];
+const footerMid = (footerCounts.length - 1) / 2;
+const footerPattern = footerCounts.map((count, index) => ({
+  count,
+  opacity: 0.22 + (1 - Math.abs(index - footerMid) / footerMid) * 0.62
+}));
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#000000" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,200..900&display=swap" rel="stylesheet" />
+    <title>{pageTitle}</title>
+  </head>
+  <body>
+    <SiteChrome activeSlug={activeSlug} />
+    <main id="main" class="main-shell">
+      <slot />
+    </main>
+    <footer class="site-footer" aria-label="Site footer">
+      <span>© 2019-2026, {site.name}</span>
+      <span class="footer-pattern" aria-hidden="true">
+        {footerPattern.map((group) => (
+          <span class="footer-square-group" style={`--square-opacity: ${group.opacity.toFixed(3)}`}>
+            {Array.from({ length: group.count }).map(() => <span class="footer-square"></span>)}
+          </span>
+        ))}
+      </span>
+      <span>Last updated: {site.updated}</span>
+    </footer>
+    <div class="lightbox" data-lightbox hidden>
+      <button class="lightbox-close" type="button" aria-label="Close image viewer" data-lightbox-close>
+        <Icon name="close" title="Close image viewer" />
+      </button>
+      <button class="lightbox-nav lightbox-prev" type="button" aria-label="Previous image" data-lightbox-prev>
+        <Icon name="arrow" title="Previous image" />
+      </button>
+      <figure class="lightbox-frame">
+        <img data-lightbox-image alt="" />
+        <figcaption class="lightbox-caption" data-lightbox-caption></figcaption>
+      </figure>
+      <button class="lightbox-nav lightbox-next" type="button" aria-label="Next image" data-lightbox-next>
+        <Icon name="arrow" title="Next image" />
+      </button>
+    </div>
+    <script>
+      const lightbox = document.querySelector("[data-lightbox]");
+      const lightboxImage = document.querySelector("[data-lightbox-image]");
+      const lightboxCaption = document.querySelector("[data-lightbox-caption]");
+      const lightboxClose = document.querySelector("[data-lightbox-close]");
+      const lightboxPrevious = document.querySelector("[data-lightbox-prev]");
+      const lightboxNext = document.querySelector("[data-lightbox-next]");
+      const lightboxItems = Array.from(document.querySelectorAll("[data-lightbox-item]"))
+        .sort((left, right) => Number(left.getAttribute("data-lightbox-index") ?? 0) - Number(right.getAttribute("data-lightbox-index") ?? 0));
+      let activeLightboxIndex = 0;
+      let lastLightboxTrigger = null;
+      let lastTriggerRect = null;
+
+      function shouldOpenInNewTab(anchor) {
+        const rawHref = anchor.getAttribute("href") || "";
+        if (rawHref.startsWith("mailto:")) return false;
+        if (/\.pdf($|\?)/i.test(rawHref)) return true;
+        if (!rawHref.startsWith("http")) return false;
+
+        const url = new URL(rawHref, window.location.href);
+        if (url.hostname === window.location.hostname) return false;
+        if (url.hostname === "xppel.com" || url.hostname.endsWith(".xppel.com")) return true;
+        return true;
+      }
+
+      document.querySelectorAll("a[href]").forEach((anchor) => {
+        if (!(anchor instanceof HTMLAnchorElement) || !shouldOpenInNewTab(anchor)) return;
+        anchor.target = "_blank";
+        anchor.rel = "noopener noreferrer";
+      });
+
+      function renderLightbox(index) {
+        const item = lightboxItems[index];
+        if (!(lightbox instanceof HTMLElement) || !(lightboxImage instanceof HTMLImageElement) || !(item instanceof HTMLAnchorElement)) return;
+        const image = item.querySelector("img");
+        activeLightboxIndex = index;
+        lightboxPrevious?.toggleAttribute("hidden", lightboxItems.length < 2);
+        lightboxNext?.toggleAttribute("hidden", lightboxItems.length < 2);
+        lightboxImage.src = item.href;
+        lightboxImage.alt = image?.getAttribute("alt") || item.getAttribute("aria-label") || "";
+        if (lightboxCaption) lightboxCaption.textContent = lightboxImage.alt;
+        lightbox.hidden = false;
+        document.documentElement.classList.add("lightbox-open");
+        lightboxClose?.focus();
+        animateLightbox(true);
+      }
+
+      function animateLightbox(open) {
+        if (!(lightbox instanceof HTMLElement) || !(lightboxImage instanceof HTMLImageElement)) return;
+        const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+        if (mediaQuery.matches || !lastTriggerRect) return;
+        const target = lightboxImage.getBoundingClientRect();
+        if (!target.width || !target.height) return;
+        const dx = lastTriggerRect.left + lastTriggerRect.width / 2 - (target.left + target.width / 2);
+        const dy = lastTriggerRect.top + lastTriggerRect.height / 2 - (target.top + target.height / 2);
+        const scale = Math.max(0.04, Math.min(lastTriggerRect.width / target.width, lastTriggerRect.height / target.height));
+        const keyframes = open
+          ? [
+              { opacity: 0, transform: `translate3d(${dx}px, ${dy}px, 0) scale(${scale})` },
+              { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)" }
+            ]
+          : [
+              { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)" },
+              { opacity: 0, transform: `translate3d(${dx}px, ${dy}px, 0) scale(${scale})` }
+            ];
+        lightboxImage.animate(keyframes, {
+          duration: 240,
+          easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+          fill: "both"
+        });
+      }
+
+      function closeLightbox() {
+        if (!(lightbox instanceof HTMLElement)) return;
+        animateLightbox(false);
+        window.setTimeout(() => {
+          lightbox.hidden = true;
+          document.documentElement.classList.remove("lightbox-open");
+          if (lastLightboxTrigger instanceof HTMLElement) lastLightboxTrigger.focus({ preventScroll: true });
+        }, 180);
+      }
+
+      function moveLightbox(delta) {
+        if (lightboxItems.length < 2) return;
+        renderLightbox((activeLightboxIndex + delta + lightboxItems.length) % lightboxItems.length);
+      }
+
+      lightboxItems.forEach((item, index) => {
+        item.addEventListener("click", (event) => {
+          event.preventDefault();
+          lastLightboxTrigger = item;
+          lastTriggerRect = item.getBoundingClientRect();
+          renderLightbox(index);
+        });
+      });
+
+      lightboxClose?.addEventListener("click", closeLightbox);
+      lightboxPrevious?.addEventListener("click", () => moveLightbox(-1));
+      lightboxNext?.addEventListener("click", () => moveLightbox(1));
+      lightbox?.addEventListener("click", (event) => {
+        if (event.target === lightbox) closeLightbox();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (!(lightbox instanceof HTMLElement) || lightbox.hidden) return;
+        if (event.key === "Escape") closeLightbox();
+        if (event.key === "ArrowLeft") moveLightbox(-1);
+        if (event.key === "ArrowRight") moveLightbox(1);
+      });
+    </script>
+  </body>
+</html>

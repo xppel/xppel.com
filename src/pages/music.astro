@@ -1,0 +1,50 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { getRenderableTracks } from "../data/music";
+
+const trackItems = await getRenderableTracks();
+const placeholderTracks = [
+  { title: "Track One Name", date: "Date" },
+  { title: "Track Two Name", date: "Date" },
+  { title: "Track Three Name", date: "Date" }
+];
+const visibleTracks = trackItems.length
+  ? trackItems.map((item) => ({
+      title: item.track.data.title,
+      date: item.track.data.date,
+      audio: item.audio,
+      Content: item.Content
+    }))
+  : placeholderTracks.map((track) => ({ ...track, audio: "", Content: null }));
+---
+
+<BaseLayout title="Music" activeSlug="music" description="Music and audio work by Andrew Appel.">
+  <section class="music-page">
+    <p class="music-intro">
+      Here are a few songs I made. They were all made in Ableton Live, and use a mix of recorded instruments, samples, and virtual instruments. I use Max/MSP to make custom effects and synths, and experiment with audio processing.
+    </p>
+
+    <ol class="track-list">
+      {visibleTracks.map((item, index) => {
+        const Content = item.Content;
+        return (
+          <li>
+            <span class="track-heading">{index + 1}.&nbsp; {item.title} - <em>{item.date}</em></span>
+            {Content ? <Content /> : null}
+            {item.audio ? (
+              <audio controls preload="none" src={item.audio} aria-label={`${item.title} by Andrew Appel`}></audio>
+            ) : (
+              <div class="audio-placeholder" role="img" aria-label={`${item.title} by Andrew Appel audio placeholder`}>
+                <span class="audio-placeholder-button">▶</span>
+                <span class="audio-placeholder-track"></span>
+                <span class="audio-placeholder-time">--:--</span>
+              </div>
+            )}
+          </li>
+        );
+      })}
+    </ol>
+
+    <p class="music-note">At this time I have not officially released any music.</p>
+  </section>
+</BaseLayout>

@@ -1,0 +1,57 @@
+---
+import Icon from "../components/Icon.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { site } from "../data/site";
+---
+
+<BaseLayout title="About" activeSlug="about" description="About Andrew Appel.">
+  <section class="about-page">
+    <header class="two-column about-intro">
+      <h1>I’m Andrew, a multimedia<br />designer + engineer + artist.</h1>
+      <div class="caption about-note">
+        <p>I’m currently based in New York.</p>
+        <p>For me, the time is <span data-clock>--:--:-- --</span>.</p>
+        <p>Contact information at the links below.</p>
+      </div>
+    </header>
+
+    <section class="two-column about-copy">
+      <div>
+        <p>Thanks for checking out my work!</p>
+        <p>Since graduating, I've been working on a few personal projects that I’ve been using as a chance to teach myself more about designing embedded systems, working with electronics, UI & UX design, web development, and DSP.</p>
+      </div>
+      <div>
+          <p>Currently, I’m developing a variety of products including hardware music production devices, web & app based services, sound visualization algos, and other cool stuff.</p>
+          <nav class="contact-links" aria-label="Contact links">
+            <span class="contact-row">
+            <a href={site.links.email}><Icon name="external" /> Email</a>
+            <a href={site.links.linkedIn} target="_blank" rel="noopener noreferrer"><Icon name="external" /> LinkedIn</a>
+            <a href={site.links.instagram} target="_blank" rel="noopener noreferrer"><Icon name="external" /> Instagram</a>
+          </span>
+          <span class="contact-row">
+            <a href={site.links.resume} target="_blank" rel="noopener noreferrer"><Icon name="southeast" /> Resume / CV</a>
+            <a href={site.links.portfolio} target="_blank" rel="noopener noreferrer"><Icon name="southeast" /> Portfolio PDF</a>
+          </span>
+        </nav>
+      </div>
+    </section>
+  </section>
+
+  <script>
+    const clock = document.querySelector("[data-clock]");
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true
+    });
+
+    function updateClock() {
+      if (clock) clock.textContent = formatter.format(new Date());
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+  </script>
+</BaseLayout>

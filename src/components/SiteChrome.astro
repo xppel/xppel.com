@@ -1,0 +1,437 @@
+---
+import Icon from "./Icon.astro";
+import { getImage } from "astro:assets";
+import { site } from "../data/site";
+import { getProjectGroups, getProjectHref } from "../data/projects";
+
+type Props = {
+  activeSlug?: string;
+};
+
+const { activeSlug = "" } = Astro.props;
+const projectGroups = await getProjectGroups();
+const isProjectsIndex = activeSlug === "projects";
+const previewImages = new Map(
+  await Promise.all(
+    projectGroups.flatMap((group) =>
+      group.projects.map(async (project) => {
+        const image = await getImage({
+          src: project.data.thumbnail,
+          width: 420,
+          format: "webp"
+        });
+        return [project.data.slug, image.src] as const;
+      })
+    )
+  )
+);
+---
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<aside class="desktop-nav" aria-label="Primary navigation">
+  <div class="brand-field" aria-label="A. Appel">
+    <a class="brand-bouncer" href="/" draggable="false" data-brand-bouncer>
+      <span>A. Appel <Icon name="broadcast" /></span>
+    </a>
+  </div>
+
+  <nav class="primary-projects-link" aria-label="Projects index">
+    <a class:list={[isProjectsIndex && "active"]} href="/projects/"><Icon name="arrow" /> Projects</a>
+  </nav>
+
+  <div class="work-list" aria-label="Project navigation">
+    {projectGroups.map((group) => (
+      <section class="work-year-group" aria-labelledby={`desktop-year-${group.year}`}>
+        <h2 id={`desktop-year-${group.year}`} class="work-year">{group.year}</h2>
+        <ul>
+          {group.projects.map((project) => (
+            <li>
+              <a
+                class:list={[activeSlug === project.data.slug && "active"]}
+                href={getProjectHref(project)}
+                data-project-preview
+                data-preview-src={previewImages.get(project.data.slug) ?? project.data.thumbnail.src}
+                data-preview-title={project.data.title}
+              >
+                {project.data.title}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))}
+  </div>
+
+  <nav class="secondary-links" aria-label="Secondary navigation">
+    <a class:list={[activeSlug === "music" && "active"]} href="/music/"><Icon name="arrow" /> Music</a>
+    <a class:list={[activeSlug === "photos" && "active"]} href="/photos/"><Icon name="arrow" /> Photos</a>
+    <span class="nav-gap" aria-hidden="true"></span>
+    <a class:list={[activeSlug === "about" && "active"]} href="/about/"><Icon name="arrow" /> About</a>
+    <a href={site.links.email}><Icon name="external" /> Email</a>
+  </nav>
+  <div class="nav-preview" aria-hidden="true" data-nav-preview>
+    <span class="nav-preview-line" aria-hidden="true"></span>
+    <span class="nav-preview-frame">
+      <img alt="" data-nav-preview-img />
+    </span>
+  </div>
+</aside>
+
+<header class="mobile-header">
+  <div class="mobile-topline">
+    <a class="mobile-brand" href="/" draggable="false" data-brand-bouncer>
+      <span>A. Appel <Icon name="broadcast" /></span>
+    </a>
+    <button class="menu-button" type="button" aria-controls="mobile-menu" aria-expanded="false" data-menu-toggle>
+      <Icon name="menu" title="Open menu" />
+    </button>
+  </div>
+  <nav class="mobile-quick-links" aria-label="Quick links">
+    <a class:list={[isProjectsIndex && "active"]} href="/projects/"><Icon name="arrow" /> Projects</a>
+    <a class:list={[activeSlug === "about" && "active"]} href="/about/"><Icon name="arrow" /> About</a>
+    <a href={site.links.email}><Icon name="external" /> Email</a>
+  </nav>
+</header>
+
+<div class="mobile-menu" id="mobile-menu" hidden>
+  <div class="mobile-menu-inner">
+    <button class="menu-button close-button" type="button" aria-controls="mobile-menu" aria-expanded="true" data-menu-toggle>
+      <Icon name="close" title="Close menu" />
+    </button>
+    <a class="mobile-menu-brand" href="/">A. Appel <Icon name="broadcast" /></a>
+    <nav class="primary-projects-link" aria-label="Mobile projects index">
+      <a class:list={[isProjectsIndex && "active"]} href="/projects/"><Icon name="arrow" /> Projects</a>
+    </nav>
+    <div class="work-list" aria-label="Mobile project navigation">
+      {projectGroups.map((group) => (
+        <section class="work-year-group" aria-labelledby={`mobile-year-${group.year}`}>
+          <h2 id={`mobile-year-${group.year}`} class="work-year">{group.year}</h2>
+          <ul>
+            {group.projects.map((project) => (
+              <li>
+                <a class:list={[activeSlug === project.data.slug && "active"]} href={getProjectHref(project)}>
+                  {project.data.title}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+    <nav class="secondary-links" aria-label="Mobile secondary navigation">
+      <a class:list={[activeSlug === "music" && "active"]} href="/music/"><Icon name="arrow" /> Music</a>
+      <a class:list={[activeSlug === "photos" && "active"]} href="/photos/"><Icon name="arrow" /> Photos</a>
+      <span class="nav-gap" aria-hidden="true"></span>
+      <a class:list={[activeSlug === "about" && "active"]} href="/about/"><Icon name="arrow" /> About</a>
+      <a href={site.links.email}><Icon name="external" /> Email</a>
+    </nav>
+  </div>
+</div>
+
+<script>
+  const toggles = document.querySelectorAll("[data-menu-toggle]");
+  const menu = document.querySelector("#mobile-menu");
+
+  function setMenu(open) {
+    if (!(menu instanceof HTMLElement)) return;
+    menu.hidden = !open;
+    document.documentElement.classList.toggle("menu-open", open);
+    toggles.forEach((toggle) => toggle.setAttribute("aria-expanded", String(open)));
+  }
+
+  toggles.forEach((toggle) => {
+    toggle.addEventListener("click", () => {
+      const isOpen = document.documentElement.classList.contains("menu-open");
+      setMenu(!isOpen);
+    });
+  });
+
+  menu?.addEventListener("click", (event) => {
+    const target = event.target;
+    if (target instanceof HTMLAnchorElement) setMenu(false);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") setMenu(false);
+  });
+
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const link = target.closest("a[href]");
+    if (!(link instanceof HTMLAnchorElement)) return;
+    if (link.target || link.hasAttribute("download") || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const url = new URL(link.href, window.location.href);
+    if (
+      url.origin === window.location.origin &&
+      url.pathname === window.location.pathname &&
+      url.search === window.location.search &&
+      url.hash === window.location.hash
+    ) {
+      event.preventDefault();
+    }
+  });
+
+  const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const brandBouncers = Array.from(document.querySelectorAll("[data-brand-bouncer]"));
+
+  brandBouncers.forEach((brand) => {
+    if (!(brand instanceof HTMLElement)) return;
+    if (motionQuery.matches) {
+      brand.classList.add("is-positioned", "is-ready");
+      return;
+    }
+    const inner = brand.querySelector("span");
+    if (!(inner instanceof HTMLElement)) return;
+
+    let x = 0;
+    let y = 0;
+    const storageKey = brand.classList.contains("mobile-brand") ? "xppel-brand-state-mobile" : "xppel-brand-state-desktop";
+    const baseSpeedX = 0.028;
+    const baseSpeedY = 0.018;
+    const maxSpeed = 0.16;
+    let vx = baseSpeedX;
+    let vy = baseSpeedY;
+    let dragging = false;
+    let moved = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let pointerX = 0;
+    let pointerY = 0;
+    let lastX = 0;
+    let lastY = 0;
+    let lastTime = performance.now();
+    let initialized = false;
+
+    function bounds() {
+      const outer = brand.getBoundingClientRect();
+      const content = inner.getBoundingClientRect();
+      const verticalTravel = Math.max(14, outer.height - content.height);
+      return {
+        maxX: Math.max(0, outer.width - content.width),
+        maxY: Math.min(verticalTravel, Math.max(0, outer.height - content.height + 6))
+      };
+    }
+
+    function apply() {
+      inner.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    }
+
+    function markReady() {
+      brand.classList.add("is-positioned");
+      inner.getBoundingClientRect();
+      requestAnimationFrame(() => brand.classList.add("is-ready"));
+    }
+
+    function clampSpeed(value, fallback) {
+      const next = Number.isFinite(value) ? value : fallback;
+      return Math.max(-maxSpeed, Math.min(maxSpeed, next));
+    }
+
+    function restoreState() {
+      const limit = bounds();
+      const stored = sessionStorage.getItem(storageKey);
+      if (stored) {
+        try {
+          const state = JSON.parse(stored);
+          x = Math.max(0, Math.min(limit.maxX, Number(state.x) || 0));
+          y = Math.max(0, Math.min(limit.maxY, Number(state.y) || 0));
+          vx = clampSpeed(Number(state.vx), baseSpeedX);
+          vy = clampSpeed(Number(state.vy), baseSpeedY);
+          if (Math.abs(vx) < 0.006) vx = baseSpeedX;
+          if (Math.abs(vy) < 0.006) vy = baseSpeedY;
+          initialized = true;
+          apply();
+          markReady();
+          return;
+        } catch {
+          sessionStorage.removeItem(storageKey);
+        }
+      }
+
+      x = Math.random() * limit.maxX;
+      y = Math.random() * limit.maxY;
+      vx = baseSpeedX * (Math.random() > 0.5 ? 1 : -1);
+      vy = baseSpeedY * (Math.random() > 0.5 ? 1 : -1);
+      initialized = true;
+      apply();
+      markReady();
+    }
+
+    function saveState() {
+      if (!initialized) return;
+      sessionStorage.setItem(storageKey, JSON.stringify({
+        x,
+        y,
+        vx: clampSpeed(vx, baseSpeedX),
+        vy: clampSpeed(vy, baseSpeedY),
+        timestamp: Date.now()
+      }));
+    }
+
+    function tick() {
+      if (!initialized) restoreState();
+      const limit = bounds();
+      if (!dragging) {
+        x += vx;
+        y += vy;
+        if (x <= 0 || x >= limit.maxX) vx *= -1;
+        if (y <= 0 || y >= limit.maxY) vy *= -1;
+        x = Math.max(0, Math.min(limit.maxX, x));
+        y = Math.max(0, Math.min(limit.maxY, y));
+        const targetVx = Math.sign(vx || baseSpeedX) * baseSpeedX;
+        const targetVy = Math.sign(vy || baseSpeedY) * baseSpeedY;
+        vx += (targetVx - vx) * 0.035;
+        vy += (targetVy - vy) * 0.035;
+      }
+      apply();
+      requestAnimationFrame(tick);
+    }
+
+    function startDrag(event) {
+      if (dragging) return;
+      event.preventDefault();
+      dragging = true;
+      moved = false;
+      dragStartX = event.clientX;
+      dragStartY = event.clientY;
+      pointerX = event.clientX - x;
+      pointerY = event.clientY - y;
+      lastX = event.clientX;
+      lastY = event.clientY;
+      lastTime = performance.now();
+    }
+
+    function moveDrag(event) {
+      if (!dragging) return;
+      const limit = bounds();
+      const now = performance.now();
+      const dt = Math.max(1, now - lastTime);
+      x = Math.max(0, Math.min(limit.maxX, event.clientX - pointerX));
+      y = Math.max(0, Math.min(limit.maxY, event.clientY - pointerY));
+      vx = Math.max(-maxSpeed, Math.min(maxSpeed, ((event.clientX - lastX) / dt) * 0.18));
+      vy = Math.max(-maxSpeed, Math.min(maxSpeed, ((event.clientY - lastY) / dt) * 0.18));
+      moved ||= Math.hypot(event.clientX - dragStartX, event.clientY - dragStartY) > 4;
+      lastX = event.clientX;
+      lastY = event.clientY;
+      lastTime = now;
+      apply();
+    }
+
+    function endDrag(event) {
+      dragging = false;
+      if (moved) event.preventDefault();
+    }
+
+    brand.addEventListener("pointerdown", (event) => {
+      startDrag(event);
+      brand.setPointerCapture(event.pointerId);
+    });
+
+    brand.addEventListener("pointermove", moveDrag);
+    brand.addEventListener("pointerup", endDrag);
+    brand.addEventListener("mousedown", startDrag);
+    window.addEventListener("mousemove", moveDrag);
+    window.addEventListener("mouseup", endDrag);
+    brand.addEventListener("dragstart", (event) => event.preventDefault());
+    window.addEventListener("pagehide", saveState);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") saveState();
+    });
+
+    brand.addEventListener("click", (event) => {
+      if (!moved) return;
+      event.preventDefault();
+      moved = false;
+    });
+
+    tick();
+  });
+
+  const preview = document.querySelector("[data-nav-preview]");
+  const previewImage = document.querySelector("[data-nav-preview-img]");
+  const previewLinks = Array.from(document.querySelectorAll("[data-project-preview]"));
+
+  if (preview instanceof HTMLElement && previewImage instanceof HTMLImageElement && window.matchMedia("(pointer: fine)").matches) {
+    let visible = false;
+    let targetX = 0;
+    let targetY = 0;
+    let stringStartX = 0;
+    let stringStartY = 0;
+    let x = 0;
+    let y = 0;
+
+    function clampToContent() {
+      const navWidth = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--nav-width")) || 260;
+      const rect = preview.getBoundingClientRect();
+      targetX = Math.max(navWidth + 16, Math.min(window.innerWidth - rect.width - 16, targetX));
+      targetY = Math.max(16, Math.min(window.innerHeight - rect.height - 16, targetY));
+    }
+
+    function animatePreview() {
+      if (visible && !motionQuery.matches) {
+        clampToContent();
+        x += (targetX - x) * 0.09;
+        y += (targetY - y) * 0.09;
+        const previewRect = preview.getBoundingClientRect();
+        const anchorY = y + previewRect.height / 2;
+        const dx = Math.max(24, Math.min(320, x - stringStartX));
+        const dy = Math.max(-140, Math.min(140, stringStartY - anchorY));
+        const stringWidth = Math.max(28, Math.min(340, Math.hypot(dx, dy)));
+        const stringAngle = Math.atan2(-dy, dx) * (180 / Math.PI);
+        preview.style.setProperty("--string-width", `${stringWidth}px`);
+        preview.style.setProperty("--string-angle", `${stringAngle}deg`);
+        preview.style.transform = `translate3d(${x}px, ${y}px, 0) scale(1)`;
+      }
+      requestAnimationFrame(animatePreview);
+    }
+
+    function show(link, event) {
+      if (!(link instanceof HTMLElement)) return;
+      previewImage.src = link.dataset.previewSrc ?? "";
+      previewImage.alt = link.dataset.previewTitle ?? "";
+      const rect = link.getBoundingClientRect();
+      const previewRect = preview.getBoundingClientRect();
+      stringStartX = rect.right + 2;
+      stringStartY = rect.top + rect.height / 2;
+      targetX = Math.max(rect.right + 18, event?.clientX ?? rect.right + 18);
+      targetY = (event?.clientY ?? rect.top) - previewRect.height / 2;
+      clampToContent();
+      x = x || targetX;
+      y = y || targetY;
+      visible = true;
+      preview.classList.add("is-visible");
+    }
+
+    function hide() {
+      visible = false;
+      preview.classList.remove("is-visible");
+    }
+
+    previewLinks.forEach((link) => {
+      link.addEventListener("pointerenter", (event) => show(link, event));
+      link.addEventListener("pointermove", (event) => {
+        const rect = link.getBoundingClientRect();
+        stringStartX = rect.right + 2;
+        stringStartY = rect.top + rect.height / 2;
+        targetX = event.clientX + 18;
+        targetY = event.clientY - preview.getBoundingClientRect().height / 2;
+      });
+      link.addEventListener("pointerleave", hide);
+      link.addEventListener("mouseenter", (event) => show(link, event));
+      link.addEventListener("mousemove", (event) => {
+        const rect = link.getBoundingClientRect();
+        stringStartX = rect.right + 2;
+        stringStartY = rect.top + rect.height / 2;
+        targetX = event.clientX + 18;
+        targetY = event.clientY - preview.getBoundingClientRect().height / 2;
+      });
+      link.addEventListener("mouseleave", hide);
+      link.addEventListener("focus", (event) => show(link, event));
+      link.addEventListener("blur", hide);
+    });
+
+    animatePreview();
+  }
+</script>

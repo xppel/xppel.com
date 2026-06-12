@@ -1,0 +1,134 @@
+---
+import Icon from "../components/Icon.astro";
+import { Image } from "astro:assets";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { site } from "../data/site";
+import { getHomeProjects, getProjectHref, getProjects } from "../data/projects";
+
+const projects = getHomeProjects(await getProjects());
+const slides = projects.length ? [...projects, projects[0]] : [];
+---
+
+<BaseLayout title={site.title} activeSlug="home">
+  <section class="home-stage" aria-label="Selected work">
+    <div class="home-slider" data-home-slider>
+      <div class="home-track">
+        {slides.map((project, index) => (
+          <a class="home-slide" href={getProjectHref(project)} aria-label={`View ${project.data.title}`} data-slide={index} data-clone={index === projects.length ? "true" : "false"}>
+            <span class="home-slide-frame">
+              <Image
+                src={project.data.thumbnail}
+                alt=""
+                widths={[640, 960, 1280, 1600]}
+                sizes="(max-width: 760px) 100vw, min(100vw - 31rem, 115rem)"
+                loading={index === 0 || index === projects.length ? "eager" : "lazy"}
+                decoding="async"
+              />
+            </span>
+            <span class="home-slide-label">{project.data.title}</span>
+          </a>
+        ))}
+      </div>
+      <button class="zone-button zone-prev" type="button" aria-label="Previous project" data-slide-prev>
+        <Icon name="arrow" />
+      </button>
+      <button class="zone-button zone-next" type="button" aria-label="Next project" data-slide-next>
+        <Icon name="arrow" />
+      </button>
+    </div>
+  </section>
+
+  <script>
+    const slider = document.querySelector("[data-home-slider]");
+    const track = slider?.querySelector(".home-track");
+    const slides = Array.from(slider?.querySelectorAll("[data-slide]") ?? []);
+    const previous = slider?.querySelector("[data-slide-prev]");
+    const next = slider?.querySelector("[data-slide-next]");
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const slideCount = Math.max(0, slides.length - 1);
+    const autoplayDelay = 3750;
+    let autoplay = 0;
+    let current = 0;
+    let slideWidth = 0;
+    let isSnapping = false;
+    let isTransitioning = false;
+
+    function measureSlide() {
+      if (!(slider instanceof HTMLElement)) return 0;
+      slideWidth = slider.getBoundingClientRect().width;
+      return slideWidth;
+    }
+
+    function render(animate = true) {
+      if (!(track instanceof HTMLElement)) return;
+      const width = slideWidth || measureSlide();
+      track.style.transition = animate ? "" : "none";
+      track.style.transform = `translate3d(${-current * width}px, 0, 0)`;
+      slides.forEach((slide, index) => slide.toggleAttribute("aria-current", index === current || (current === slideCount && index === 0)));
+    }
+
+    function move(delta, manual = false) {
+      if (!slideCount || isSnapping || isTransitioning) return;
+
+      if (manual) startAutoplay();
+
+      if (delta < 0 && current === 0) {
+        current = slideCount;
+        render(false);
+        track?.offsetHeight;
+        current = slideCount - 1;
+        isTransitioning = true;
+        render();
+        return;
+      }
+
+      current = Math.min(current + delta, slideCount);
+      isTransitioning = true;
+      render();
+    }
+
+    function shouldPauseAutoplay() {
+      return mediaQuery.matches ||
+        document.documentElement.classList.contains("menu-open") ||
+        document.documentElement.classList.contains("lightbox-open");
+    }
+
+    function autoplaySpeed() {
+      return slider?.matches(":hover") ? autoplayDelay * 1.5 : autoplayDelay;
+    }
+
+    function startAutoplay() {
+      window.clearTimeout(autoplay);
+      if (!slideCount || mediaQuery.matches) return;
+      autoplay = window.setTimeout(() => {
+        if (!shouldPauseAutoplay()) move(1);
+        startAutoplay();
+      }, autoplaySpeed());
+    }
+
+    previous?.addEventListener("click", () => move(-1, true));
+    next?.addEventListener("click", () => move(1, true));
+    track?.addEventListener("transitionend", (event) => {
+      if (event.target !== track || event.propertyName !== "transform") return;
+      isTransitioning = false;
+      if (current !== slideCount) return;
+      isSnapping = true;
+      current = 0;
+      render(false);
+      track?.offsetHeight;
+      isSnapping = false;
+    });
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowLeft") move(-1, true);
+      if (event.key === "ArrowRight") move(1, true);
+    });
+    window.addEventListener("resize", () => {
+      measureSlide();
+      render(false);
+    });
+    mediaQuery.addEventListener("change", startAutoplay);
+    measureSlide();
+    render();
+    startAutoplay();
+  </script>
+</BaseLayout>

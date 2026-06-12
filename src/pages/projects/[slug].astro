@@ -1,0 +1,127 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { Image } from "astro:assets";
+import { render } from "astro:content";
+import { site } from "../../data/site";
+import { formatTagLabel, getProjectHref, getProjectInfoLines, getProjectTags, getProjects } from "../../data/projects";
+
+export async function getStaticPaths() {
+  const projects = await getProjects();
+
+  return projects.map((project) => ({
+    params: { slug: project.data.slug },
+    props: { project }
+  }));
+}
+
+const { project } = Astro.props;
+const projects = await getProjects();
+const projectIndex = projects.findIndex((entry) => entry.data.slug === project.data.slug);
+const previousProject = projectIndex > 0 ? projects[projectIndex - 1] : undefined;
+const nextProject = projectIndex >= 0 && projectIndex < projects.length - 1 ? projects[projectIndex + 1] : undefined;
+const { Content } = await render(project);
+const infoLines = getProjectInfoLines(project);
+const tags = getProjectTags(project);
+const keywords = tags.map((tag) => tag.label).join(", ");
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "CreativeWork",
+  name: project.data.title,
+  description: project.data.subtitle,
+  keywords,
+  image: project.data.thumbnail.src,
+  dateCreated: project.data.info.date,
+  creator: {
+    "@type": "Person",
+    name: site.name
+  }
+};
+---
+
+<BaseLayout title={project.data.title} description={`${project.data.title}: ${project.data.subtitle}. ${keywords}`} activeSlug={project.data.slug}>
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  <article class="project-page">
+    <header class="project-intro project-rule-grid two-column">
+      <div class="project-rule-cell">
+        <h1>{project.data.title}</h1>
+        <p class="description"><em>{project.data.subtitle}</em></p>
+      </div>
+      <div class="caption meta-list project-rule-cell">
+        {infoLines.map((line) => (
+          <p>
+            {line.href ? (
+              <a class="inline-link" href={line.href} target={line.external ? "_blank" : undefined} rel={line.external ? "noopener noreferrer" : undefined}>{line.text}</a>
+            ) : line.text}
+          </p>
+        ))}
+      </div>
+    </header>
+
+    <section class="project-body project-rule-grid two-column">
+      <div class="project-frame project-rule-cell">
+        {project.data.frame.type === "image" ? (
+          <a class="project-image-link" href={project.data.frame.image.src} aria-label={`Open ${project.data.title} image`} data-lightbox-item data-lightbox-index="0">
+            <Image
+              class="project-image"
+              src={project.data.frame.image}
+              alt={project.data.frame.alt ?? `${project.data.title} project image`}
+              widths={[640, 960, 1280, 1600]}
+              sizes="(max-width: 760px) 100vw, 50vw"
+              loading="eager"
+              decoding="async"
+            />
+          </a>
+        ) : (
+          <video class="project-image" controls playsinline preload="metadata" poster={project.data.frame.poster?.src} aria-label={project.data.frame.alt ?? `${project.data.title} project video`}>
+            {project.data.frame.sources.map((source) => <source src={source.src} type={source.type} />)}
+          </video>
+        )}
+      </div>
+      <div class="project-copy project-rule-cell">
+        <Content />
+        {project.data.portfolioLink && (
+          <p>
+            More info can be found in{" "}
+            <a class="inline-link" href={site.links.portfolio} target="_blank" rel="noopener noreferrer">my portfolio</a>.
+          </p>
+        )}
+      </div>
+    </section>
+
+    {tags.length > 0 && (
+      <nav class="project-tags" aria-label={`${project.data.title} tags`}>
+        {tags.slice(0, 8).map((tag) => (
+          <a href={`/projects/?tag=${tag.slug}`} data-tag={tag.slug}>{formatTagLabel(tag.label)}</a>
+        ))}
+      </nav>
+    )}
+
+    {project.data.gallery.length > 0 && (
+      <section class="project-gallery" aria-label={`${project.data.title} additional media`}>
+        {project.data.gallery.map((item, index) => (
+          item.type === "image" ? (
+            <a href={item.image.src} class="photo-link" data-lightbox-item data-lightbox-index={index + 1}>
+              <Image
+                src={item.image}
+                alt={item.alt ?? `${project.data.title} gallery image ${index + 1}`}
+                widths={[480, 760, 1080, 1440]}
+                sizes="(max-width: 760px) 100vw, 50vw"
+                loading="lazy"
+                decoding="async"
+              />
+            </a>
+          ) : (
+            <video class="project-image" controls playsinline preload="metadata" poster={item.poster?.src} aria-label={item.alt ?? `${project.data.title} gallery video ${index + 1}`}>
+              {item.sources.map((source) => <source src={source.src} type={source.type} />)}
+            </video>
+          )
+        ))}
+      </section>
+    )}
+
+    <nav class="project-pager" aria-label="Adjacent projects">
+      {previousProject ? <a href={getProjectHref(previousProject)}>← Previous project</a> : <span></span>}
+      {nextProject ? <a href={getProjectHref(nextProject)}>Next project →</a> : <span></span>}
+    </nav>
+  </article>
+</BaseLayout>

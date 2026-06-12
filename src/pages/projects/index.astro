@@ -1,0 +1,225 @@
+---
+import Icon from "../../components/Icon.astro";
+import { Image } from "astro:assets";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { site } from "../../data/site";
+import { formatTagLabel, getProjectDescriptionText, getProjectHref, getProjectSearchText, getProjectTags, getProjects, getTaxonomyOptions } from "../../data/projects";
+
+const projects = await getProjects();
+const taxonomy = getTaxonomyOptions(projects);
+const taxonomyLabels = {
+  format: "Format",
+  status: "Status",
+  disciplines: "Disciplines",
+  genres: "Sectors"
+};
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  name: "Projects",
+  itemListElement: projects.map((project, index) => ({
+    "@type": "ListItem",
+    position: index + 1,
+    url: `https://xppel.com${getProjectHref(project)}`,
+    name: project.data.title
+  }))
+};
+---
+
+<BaseLayout title="Projects" activeSlug="projects" description="Searchable project index for Andrew Appel's design, engineering, and creative technology work.">
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  <section class="projects-index" data-projects-index data-view="grid" data-size="m">
+    <header class="projects-toolbar">
+      <button class="projects-clear-filters" type="button" aria-label="Clear filters" data-clear-filters hidden>
+        <Icon name="close" title="Clear filters" />
+      </button>
+      <button class="projects-filter-toggle" type="button" aria-expanded="false" aria-controls="project-filters" aria-label="Filters" data-filter-toggle>
+        <Icon name="filter" title="Filters" />
+      </button>
+      <label class="project-search">
+        <span class="visually-hidden">Search projects</span>
+        <input type="search" placeholder="Search projects" autocomplete="off" data-project-search />
+      </label>
+      <div class="projects-view-controls" aria-label="Project view controls">
+        <button type="button" data-view-mode="grid" aria-pressed="true" aria-label="Grid view">
+          <Icon name="grid" title="Grid view" />
+        </button>
+        <button type="button" data-view-mode="list" aria-pressed="false" aria-label="List view">
+          <Icon name="list" title="List view" />
+        </button>
+        <button type="button" aria-label="Smaller cards" data-size-step="-1">-</button>
+        <button type="button" aria-label="Larger cards" data-size-step="1">+</button>
+      </div>
+    </header>
+
+    <div class="projects-filter-panel" id="project-filters" hidden data-filter-panel>
+      {Object.entries(taxonomy).map(([key, options]) => (
+        <fieldset>
+          <legend>{taxonomyLabels[key as keyof typeof taxonomyLabels]}</legend>
+          {options.map((option) => (
+            <label>
+              <input type="checkbox" value={option.slug} data-project-filter />
+              <span class="filter-box" aria-hidden="true"></span>
+              <span>{formatTagLabel(option.label)}</span>
+            </label>
+          ))}
+        </fieldset>
+      ))}
+    </div>
+
+    <p class="caption projects-count" data-project-count>{projects.length} projects</p>
+
+    <div class="project-card-grid">
+      {projects.map((project) => {
+        const tags = getProjectTags(project);
+        const search = getProjectSearchText(project).toLowerCase();
+        const tagSlugs = tags.map((tag) => tag.slug).join(" ");
+        const summary = getProjectDescriptionText(project);
+
+        return (
+          <article class="project-card" data-project-card data-search={search} data-tags={tagSlugs}>
+            <a class="project-card-link" href={getProjectHref(project)} aria-label={`View ${project.data.title}`}>
+              <div class="project-card-media">
+                <span class="project-card-thumb-frame" aria-hidden="true">
+                  <Image
+                    class="project-card-thumb"
+                    src={project.data.thumbnail}
+                    alt=""
+                    widths={[240, 360, 520, 760]}
+                    sizes="(max-width: 760px) 50vw, 33vw"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </span>
+              </div>
+              <div class="project-card-main">
+                <p class="project-card-date">{project.data.info.date}</p>
+                <h2>{project.data.title}</h2>
+                <p class="project-card-subtitle">{project.data.subtitle}</p>
+                <p class="project-card-summary">{summary}</p>
+              </div>
+            </a>
+            <div class="project-card-tags">
+              {tags.slice(0, 5).map((tag) => (
+                <a href={`/projects/?tag=${tag.slug}`} data-filter-link={tag.slug}>{formatTagLabel(tag.label)}</a>
+              ))}
+            </div>
+          </article>
+        );
+      })}
+    </div>
+
+    <p class="projects-empty" hidden data-project-empty>No projects match those filters.</p>
+  </section>
+
+  <script>
+    const root = document.querySelector("[data-projects-index]");
+    const searchInput = root?.querySelector("[data-project-search]");
+    const clearFilters = root?.querySelector("[data-clear-filters]");
+    const filterToggle = root?.querySelector("[data-filter-toggle]");
+    const filterPanel = root?.querySelector("[data-filter-panel]");
+    const filters = Array.from(root?.querySelectorAll("[data-project-filter]") ?? []);
+    const cards = Array.from(root?.querySelectorAll("[data-project-card]") ?? []);
+    const count = root?.querySelector("[data-project-count]");
+    const empty = root?.querySelector("[data-project-empty]");
+    const viewButtons = Array.from(root?.querySelectorAll("[data-view-mode]") ?? []);
+    const sizeButtons = Array.from(root?.querySelectorAll("[data-size-step]") ?? []);
+    const sizes = ["s", "m", "l"];
+
+    function readParams() {
+      const params = new URLSearchParams(window.location.search);
+      const selectedTags = new Set(params.getAll("tag"));
+      return {
+        q: params.get("q") ?? "",
+        view: "grid",
+        size: "m",
+        selectedTags
+      };
+    }
+
+    function writeParams({ q, view, size, selectedTags }) {
+      const params = new URLSearchParams();
+      if (q) params.set("q", q);
+      selectedTags.forEach((tag) => params.append("tag", tag));
+      const query = params.toString();
+      window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+    }
+
+    function getState() {
+      return {
+        q: searchInput instanceof HTMLInputElement ? searchInput.value.trim().toLowerCase() : "",
+        view: root?.getAttribute("data-view") === "list" ? "list" : "grid",
+        size: root?.getAttribute("data-size") ?? "m",
+        selectedTags: new Set(filters.filter((filter) => filter instanceof HTMLInputElement && filter.checked).map((filter) => filter.value))
+      };
+    }
+
+    function applyState(state, updateUrl = true) {
+      if (!(root instanceof HTMLElement)) return;
+      root.setAttribute("data-view", state.view);
+      root.setAttribute("data-size", state.size);
+      if (searchInput instanceof HTMLInputElement) searchInput.value = state.q;
+      filters.forEach((filter) => {
+        if (filter instanceof HTMLInputElement) filter.checked = state.selectedTags.has(filter.value);
+      });
+      viewButtons.forEach((button) => button.setAttribute("aria-pressed", String(button.getAttribute("data-view-mode") === state.view)));
+      if (clearFilters instanceof HTMLButtonElement) {
+        const hasTaxonomyFilters = state.selectedTags.size > 0;
+        clearFilters.hidden = !hasTaxonomyFilters;
+        clearFilters.disabled = !hasTaxonomyFilters;
+      }
+
+      let visible = 0;
+      cards.forEach((card) => {
+        if (!(card instanceof HTMLElement)) return;
+        const textMatch = !state.q || (card.dataset.search ?? "").includes(state.q);
+        const cardTags = new Set((card.dataset.tags ?? "").split(" ").filter(Boolean));
+        const selected = Array.from(state.selectedTags);
+        const tagMatch = !selected.length || selected.some((tag) => cardTags.has(tag));
+        const show = textMatch && tagMatch;
+        card.hidden = !show;
+        if (show) visible += 1;
+      });
+
+      if (count) count.textContent = `${visible} / ${cards.length} projects`;
+      if (empty instanceof HTMLElement) empty.hidden = visible > 0;
+      if (updateUrl) writeParams(state);
+    }
+
+    filterToggle?.addEventListener("click", () => {
+      if (!(filterPanel instanceof HTMLElement) || !(filterToggle instanceof HTMLElement)) return;
+      const open = filterPanel.hidden;
+      filterPanel.hidden = !open;
+      filterToggle.setAttribute("aria-expanded", String(open));
+    });
+
+    searchInput?.addEventListener("input", () => applyState(getState()));
+    filters.forEach((filter) => filter.addEventListener("change", () => applyState(getState())));
+    clearFilters?.addEventListener("click", () => {
+      const state = getState();
+      applyState({ ...state, selectedTags: new Set() });
+    });
+    viewButtons.forEach((button) => button.addEventListener("click", () => applyState({ ...getState(), view: button.getAttribute("data-view-mode") })));
+    sizeButtons.forEach((button) => button.addEventListener("click", () => {
+      const state = getState();
+      const nextIndex = Math.max(0, Math.min(sizes.length - 1, sizes.indexOf(state.size) + Number(button.getAttribute("data-size-step"))));
+      applyState({ ...state, size: sizes[nextIndex] });
+    }));
+
+    window.addEventListener("keydown", (event) => {
+      const active = document.activeElement;
+      const isTyping = active instanceof HTMLElement && ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName);
+      if (event.key === "/" && !isTyping) {
+        event.preventDefault();
+        if (searchInput instanceof HTMLInputElement) searchInput.focus();
+      }
+      if (isTyping) return;
+      if (event.key.toLowerCase() === "g") applyState({ ...getState(), view: "grid" });
+      if (event.key.toLowerCase() === "l") applyState({ ...getState(), view: "list" });
+      if (event.key === "+" || event.key === "=") sizeButtons.find((button) => button.getAttribute("data-size-step") === "1")?.dispatchEvent(new MouseEvent("click"));
+      if (event.key === "-") sizeButtons.find((button) => button.getAttribute("data-size-step") === "-1")?.dispatchEvent(new MouseEvent("click"));
+    });
+
+    applyState(readParams(), false);
+  </script>
+</BaseLayout>
