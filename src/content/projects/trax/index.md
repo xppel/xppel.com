@@ -2,12 +2,11 @@
 title: "Trax"
 slug: "trax"
 subtitle: "Discrete and non-invasive chronic disease prevention."
-year: 2025
-order: 20
+projectId: 6
+completed: "2025-05"
 thumbnail: "./thumbnail.png"
 home:
   show: true
-  order: 20
 frame:
   type: "image"
   image: "./thumbnail.png"
@@ -27,7 +26,6 @@ taxonomy:
     - "Sport/health/wellness"
     - "Consumer electronics"
 info:
-  date: "May 2025"
   locationClient: "Brunel University London"
   notes:
     - text: "Exhibited at Made in Brunel, June 4-7 2025."

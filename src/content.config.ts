@@ -20,6 +20,13 @@ const projectMediaSchema = ({ image }: { image: () => z.ZodTypeAny }) =>
       alt: z.string().optional()
     }),
     z.object({
+      type: z.literal("youtube"),
+      videoId: z.string(),
+      title: z.string(),
+      poster: image().optional(),
+      alt: z.string().optional()
+    }),
+    z.object({
       type: z.literal("video"),
       poster: image().optional(),
       sources: z.array(mediaSourceSchema).default([]),
@@ -38,12 +45,11 @@ const projects = defineCollection({
       title: z.string(),
       slug: z.string(),
       subtitle: z.string(),
-      year: z.number(),
-      order: z.number(),
+      projectId: z.number().int().positive(),
+      completed: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
       thumbnail: image(),
       home: z.object({
-        show: z.boolean().default(true),
-        order: z.number()
+        show: z.boolean().default(true)
       }),
       frame: projectMediaSchema({ image }),
       taxonomy: z.object({
@@ -53,7 +59,6 @@ const projects = defineCollection({
         genres: z.array(z.string()).default([])
       }),
       info: z.object({
-        date: z.string(),
         locationClient: z.string(),
         notes: z.array(noteSchema).default([])
       }),
@@ -82,7 +87,6 @@ const music = defineCollection({
   }),
   schema: z.object({
     title: z.string(),
-    date: z.string(),
     order: z.number(),
     audio: z.string().optional(),
     hidden: z.boolean().default(false)

@@ -116,7 +116,10 @@ const slides = projects.length ? [...projects, projects[0]] : [];
       current = 0;
       render(false);
       track?.offsetHeight;
-      isSnapping = false;
+      window.requestAnimationFrame(() => {
+        if (track instanceof HTMLElement) track.style.transition = "";
+        isSnapping = false;
+      });
     });
     window.addEventListener("keydown", (event) => {
       if (event.key === "ArrowLeft") move(-1, true);

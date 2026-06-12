@@ -3,9 +3,18 @@ import Icon from "../../components/Icon.astro";
 import { Image } from "astro:assets";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { site } from "../../data/site";
-import { formatTagLabel, getProjectDescriptionText, getProjectHref, getProjectSearchText, getProjectTags, getProjects, getTaxonomyOptions } from "../../data/projects";
+import { formatTagLabel, getProjectCompletedLabel, getProjectDescriptionText, getProjectHref, getProjectSearchText, getProjectTags, getProjects, getTaxonomyOptions } from "../../data/projects";
 
 const projects = await getProjects();
+const previewModules = import.meta.glob("../../content/projects/*/preview.gif", { eager: true });
+const normalizePreviewKey = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+const previewGifs = new Map(
+  Object.entries(previewModules).map(([path, module]) => {
+    const folder = path.split("/").at(-2) ?? "";
+    const image = (module as { default: { src: string } }).default;
+    return [normalizePreviewKey(folder), image.src] as const;
+  })
+);
 const taxonomy = getTaxonomyOptions(projects);
 const taxonomyLabels = {
   format: "Format",
@@ -70,11 +79,13 @@ const jsonLd = {
     <p class="caption projects-count" data-project-count>{projects.length} projects</p>
 
     <div class="project-card-grid">
-      {projects.map((project) => {
+      {projects.map((project, index) => {
         const tags = getProjectTags(project);
         const search = getProjectSearchText(project).toLowerCase();
         const tagSlugs = tags.map((tag) => tag.slug).join(" ");
         const summary = getProjectDescriptionText(project);
+        const previewGif = previewGifs.get(normalizePreviewKey(project.data.slug));
+        const thumbnailLoading = index < 6 ? "eager" : "lazy";
 
         return (
           <article class="project-card" data-project-card data-search={search} data-tags={tagSlugs}>
@@ -87,13 +98,16 @@ const jsonLd = {
                     alt=""
                     widths={[240, 360, 520, 760]}
                     sizes="(max-width: 760px) 50vw, 33vw"
-                    loading="lazy"
+                    loading={thumbnailLoading}
                     decoding="async"
                   />
+                  {previewGif && (
+                    <img class="project-card-preview" src={previewGif} alt="" loading="lazy" decoding="async" />
+                  )}
                 </span>
               </div>
               <div class="project-card-main">
-                <p class="project-card-date">{project.data.info.date}</p>
+                <p class="project-card-date">{getProjectCompletedLabel(project)}</p>
                 <h2>{project.data.title}</h2>
                 <p class="project-card-subtitle">{project.data.subtitle}</p>
                 <p class="project-card-summary">{summary}</p>

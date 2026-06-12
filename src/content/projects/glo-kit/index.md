@@ -2,12 +2,11 @@
 title: "Glo-Kit"
 slug: "glo-kit"
 subtitle: "Modular sports playset that feels like a video game."
-year: 2022
-order: 10
+projectId: 2
+completed: "2022-12"
 thumbnail: "./thumbnail.png"
 home:
   show: true
-  order: 50
 frame:
   type: "image"
   image: "./thumbnail.png"
@@ -24,7 +23,6 @@ taxonomy:
     - "Creative tools"
     - "Sport/health/wellness"
 info:
-  date: "December 2022"
   locationClient: "Brunel University London"
   notes:
     - text: "Module: Design Process (Year 2)."

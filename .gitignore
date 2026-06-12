@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Astro build output and generated types/cache
+dist/
+.astro/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment/local config
+.env
+.env.*
+!.env.example
+
+# macOS/editor noise
+.DS_Store
+*.swp
+
+# Local source/archive folders that are not used by the built site
+_Compressed Photos/
+_Compressed Projects/
+_Music/
+_PDFs/
+_Photos/
+_Projects/

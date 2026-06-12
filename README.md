@@ -8,7 +8,8 @@ This repository contains the source for `xppel.com`, a static portfolio built wi
 
 ## Requirements
 
-- Node.js 20 or newer
+- Node.js 24 recommended for GitHub Actions parity
+- Node.js 20 or newer for local development
 - npm
 
 ## Getting Started
@@ -62,9 +63,41 @@ Images that are displayed on pages should stay in `src/content/` next to their c
 ## Deployment
 
 The site is configured with `site: "https://xppel.com"` in `astro.config.mjs`.
-The build output in `dist/` is static and suitable for GitHub Pages or another static host.
+GitHub Pages deployment is handled by `.github/workflows/deploy.yml`.
 
-Run `npm run build` before deploying or after changing content schemas, image usage, layout code, or routes.
+On GitHub:
+
+1. Open the repository settings.
+2. Go to **Pages**.
+3. Set **Source** to **GitHub Actions**.
+4. Set the custom domain to `xppel.com`.
+5. Enable **Enforce HTTPS** once GitHub makes it available.
+
+The `public/CNAME` file also contains `xppel.com`, so the custom domain is included in the built site.
+
+If GitHub shows a **Build with Jekyll** job, Pages is still set to branch publishing. Switch the Pages source to **GitHub Actions** and push `.github/workflows/deploy.yml`.
+
+For the apex domain `xppel.com`, configure these DNS `A` records at the domain provider:
+
+```txt
+185.199.108.153
+185.199.109.153
+185.199.110.153
+185.199.111.153
+```
+
+Optional IPv6 `AAAA` records:
+
+```txt
+2606:50c0:8000::153
+2606:50c0:8001::153
+2606:50c0:8002::153
+2606:50c0:8003::153
+```
+
+For `www.xppel.com`, add a `CNAME` record pointing to `xppel.github.io`.
+
+Run `npm run build` before pushing changes that affect content schemas, image usage, layout code, or routes.
 
 ## Git Notes
 

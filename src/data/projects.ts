@@ -37,8 +37,7 @@ export async function getProjects() {
   const projects = await getCollection("projects");
 
   return projects.sort((a, b) => {
-    if (a.data.year !== b.data.year) return b.data.year - a.data.year;
-    if (a.data.order !== b.data.order) return a.data.order - b.data.order;
+    if (a.data.projectId !== b.data.projectId) return b.data.projectId - a.data.projectId;
     return a.data.title.localeCompare(b.data.title);
   });
 }
@@ -47,15 +46,38 @@ export function getProjectHref(project: ProjectEntry) {
   return `/projects/${project.data.slug}/`;
 }
 
+export function getAdjacentProjectsById(projects: ProjectEntry[], currentProject: ProjectEntry) {
+  const orderedProjects = [...projects].sort((a, b) => b.data.projectId - a.data.projectId || a.data.title.localeCompare(b.data.title));
+  const projectIndex = orderedProjects.findIndex((entry) => entry.data.projectId === currentProject.data.projectId);
+
+  return {
+    previousProject: projectIndex > 0 ? orderedProjects[projectIndex - 1] : undefined,
+    nextProject: projectIndex >= 0 && projectIndex < orderedProjects.length - 1 ? orderedProjects[projectIndex + 1] : undefined
+  };
+}
+
 export function getHomeProjects(projects: ProjectEntry[]) {
   return projects
     .filter((project) => project.data.home.show)
-    .sort((a, b) => a.data.home.order - b.data.home.order || a.data.title.localeCompare(b.data.title));
+    .sort((a, b) => b.data.projectId - a.data.projectId || a.data.title.localeCompare(b.data.title));
+}
+
+export function getProjectCompletedYear(project: ProjectEntry) {
+  return Number(project.data.completed.slice(0, 4));
+}
+
+export function getProjectCompletedLabel(project: ProjectEntry) {
+  const [year, month] = project.data.completed.split("-").map(Number);
+  return new Intl.DateTimeFormat("en", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC"
+  }).format(new Date(Date.UTC(year, month - 1, 1)));
 }
 
 export function getProjectInfoLines(project: ProjectEntry) {
   return [
-    { text: `Designed ${project.data.info.date} at ${project.data.info.locationClient}.` },
+    { text: `Designed ${getProjectCompletedLabel(project)} at ${project.data.info.locationClient}.` },
     ...project.data.info.notes
   ];
 }
@@ -77,9 +99,10 @@ export function groupProjectsByYear(projects: ProjectEntry[]): ProjectGroup[] {
   const groups = new Map<number, ProjectEntry[]>();
 
   for (const project of projects) {
-    const group = groups.get(project.data.year) ?? [];
+    const year = getProjectCompletedYear(project);
+    const group = groups.get(year) ?? [];
     group.push(project);
-    groups.set(project.data.year, group);
+    groups.set(year, group);
   }
 
   return Array.from(groups, ([year, groupProjects]) => ({
@@ -136,7 +159,7 @@ export function getProjectSearchText(project: ProjectEntry) {
     project.data.title,
     project.data.subtitle,
     getProjectDescriptionText(project),
-    project.data.info.date,
+    getProjectCompletedLabel(project),
     project.data.info.locationClient,
     ...project.data.info.notes.map((note) => note.text),
     ...getProjectTags(project).map((tag) => tag.label)

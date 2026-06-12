@@ -2,12 +2,11 @@
 title: "Party Piece"
 slug: "party-piece"
 subtitle: "Active soundsystem for outdoor listening with friends."
-year: 2022
-order: 20
+projectId: 3
+completed: "2022-12"
 thumbnail: "./thumbnail.png"
 home:
   show: true
-  order: 60
 frame:
   type: "image"
   image: "./thumbnail.png"
@@ -26,7 +25,6 @@ taxonomy:
     - "Creative tools"
     - "Consumer electronics"
 info:
-  date: "December 2022"
   locationClient: "Brunel University London"
   notes:
     - text: "Personal Project."

@@ -2,12 +2,11 @@
 title: "Dualith"
 slug: "dualith"
 subtitle: "Responsive luminaire for both task and ambient lighting."
-year: 2019
-order: 10
+projectId: 1
+completed: "2019-10"
 thumbnail: "./thumbnail.png"
 home:
   show: true
-  order: 70
 frame:
   type: "image"
   image: "./thumbnail.png"
@@ -26,7 +25,6 @@ taxonomy:
     - "Home goods"
     - "Furniture/lighting"
 info:
-  date: "October 2019"
   locationClient: "Eton College"
   notes:
     - text: "Module: GCSE Design (Resistant Materials)."

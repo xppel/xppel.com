@@ -2,12 +2,11 @@
 title: "InPulse (Live)"
 slug: "inpulse-(live)"
 subtitle: "Adaptive music production & performance device."
-year: 2025
-order: 10
+projectId: 7
+completed: "2025-05"
 thumbnail: "./thumbnail.png"
 home:
   show: true
-  order: 10
 frame:
   type: "image"
   image: "./thumbnail.png"
@@ -28,7 +27,6 @@ taxonomy:
     - "Creative tools"
     - "Consumer electronics"
 info:
-  date: "May 2025"
   locationClient: "Brunel University London"
   notes:
     - text: "Exhibited at Made in Brunel, June 4-7 2025."

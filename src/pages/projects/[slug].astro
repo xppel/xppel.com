@@ -3,7 +3,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import { Image } from "astro:assets";
 import { render } from "astro:content";
 import { site } from "../../data/site";
-import { formatTagLabel, getProjectHref, getProjectInfoLines, getProjectTags, getProjects } from "../../data/projects";
+import { formatTagLabel, getAdjacentProjectsById, getProjectHref, getProjectInfoLines, getProjectTags, getProjects } from "../../data/projects";
 
 export async function getStaticPaths() {
   const projects = await getProjects();
@@ -16,13 +16,13 @@ export async function getStaticPaths() {
 
 const { project } = Astro.props;
 const projects = await getProjects();
-const projectIndex = projects.findIndex((entry) => entry.data.slug === project.data.slug);
-const previousProject = projectIndex > 0 ? projects[projectIndex - 1] : undefined;
-const nextProject = projectIndex >= 0 && projectIndex < projects.length - 1 ? projects[projectIndex + 1] : undefined;
+const { previousProject, nextProject } = getAdjacentProjectsById(projects, project);
 const { Content } = await render(project);
 const infoLines = getProjectInfoLines(project);
 const tags = getProjectTags(project);
 const keywords = tags.map((tag) => tag.label).join(", ");
+const mediaItems = [project.data.frame, ...project.data.gallery];
+const hasMediaNav = mediaItems.length > 1;
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "CreativeWork",
@@ -30,7 +30,7 @@ const jsonLd = {
   description: project.data.subtitle,
   keywords,
   image: project.data.thumbnail.src,
-  dateCreated: project.data.info.date,
+  dateCreated: project.data.completed,
   creator: {
     "@type": "Person",
     name: site.name
@@ -59,23 +59,51 @@ const jsonLd = {
 
     <section class="project-body project-rule-grid two-column">
       <div class="project-frame project-rule-cell">
-        {project.data.frame.type === "image" ? (
-          <a class="project-image-link" href={project.data.frame.image.src} aria-label={`Open ${project.data.title} image`} data-lightbox-item data-lightbox-index="0">
-            <Image
-              class="project-image"
-              src={project.data.frame.image}
-              alt={project.data.frame.alt ?? `${project.data.title} project image`}
-              widths={[640, 960, 1280, 1600]}
-              sizes="(max-width: 760px) 100vw, 50vw"
-              loading="eager"
-              decoding="async"
-            />
-          </a>
-        ) : (
-          <video class="project-image" controls playsinline preload="metadata" poster={project.data.frame.poster?.src} aria-label={project.data.frame.alt ?? `${project.data.title} project video`}>
-            {project.data.frame.sources.map((source) => <source src={source.src} type={source.type} />)}
-          </video>
-        )}
+        <div class="project-media-carousel" data-project-media>
+          <div class="project-media-track" data-project-media-track>
+            {mediaItems.map((item, index) => (
+              <figure class="project-media-slide" data-project-media-slide={index}>
+                {item.type === "image" ? (
+                  <a class="project-image-link" href={item.image.src} aria-label={`Open ${project.data.title} image ${index + 1}`} data-lightbox-item data-lightbox-index={index}>
+                    {item.image.src.endsWith(".gif") ? (
+                      <img class="project-image" src={item.image.src} alt={item.alt ?? `${project.data.title} project image ${index + 1}`} loading={index === 0 ? "eager" : "lazy"} decoding="async" />
+                    ) : (
+                      <Image
+                        class="project-image"
+                        src={item.image}
+                        alt={item.alt ?? `${project.data.title} project image ${index + 1}`}
+                        widths={[640, 960, 1280, 1600]}
+                        sizes="(max-width: 760px) 100vw, 50vw"
+                        loading={index === 0 ? "eager" : "lazy"}
+                        decoding="async"
+                      />
+                    )}
+                  </a>
+                ) : item.type === "youtube" ? (
+                  <iframe
+                    class="project-embed"
+                    src={`https://www.youtube-nocookie.com/embed/${item.videoId}`}
+                    title={item.title}
+                    loading="lazy"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowfullscreen
+                  ></iframe>
+                ) : (
+                  <video class="project-image" controls playsinline preload="metadata" poster={item.poster?.src} aria-label={item.alt ?? `${project.data.title} project video ${index + 1}`}>
+                    {item.sources.map((source) => <source src={source.src} type={source.type} />)}
+                  </video>
+                )}
+              </figure>
+            ))}
+          </div>
+          {hasMediaNav && (
+            <div class="project-media-controls" aria-label={`${project.data.title} media controls`}>
+              <button type="button" aria-label="Previous media" data-project-media-prev>←</button>
+              <span class="caption" data-project-media-count>1 / {mediaItems.length}</span>
+              <button type="button" aria-label="Next media" data-project-media-next>→</button>
+            </div>
+          )}
+        </div>
       </div>
       <div class="project-copy project-rule-cell">
         <Content />
@@ -96,32 +124,40 @@ const jsonLd = {
       </nav>
     )}
 
-    {project.data.gallery.length > 0 && (
-      <section class="project-gallery" aria-label={`${project.data.title} additional media`}>
-        {project.data.gallery.map((item, index) => (
-          item.type === "image" ? (
-            <a href={item.image.src} class="photo-link" data-lightbox-item data-lightbox-index={index + 1}>
-              <Image
-                src={item.image}
-                alt={item.alt ?? `${project.data.title} gallery image ${index + 1}`}
-                widths={[480, 760, 1080, 1440]}
-                sizes="(max-width: 760px) 100vw, 50vw"
-                loading="lazy"
-                decoding="async"
-              />
-            </a>
-          ) : (
-            <video class="project-image" controls playsinline preload="metadata" poster={item.poster?.src} aria-label={item.alt ?? `${project.data.title} gallery video ${index + 1}`}>
-              {item.sources.map((source) => <source src={source.src} type={source.type} />)}
-            </video>
-          )
-        ))}
-      </section>
-    )}
-
     <nav class="project-pager" aria-label="Adjacent projects">
       {previousProject ? <a href={getProjectHref(previousProject)}>← Previous project</a> : <span></span>}
       {nextProject ? <a href={getProjectHref(nextProject)}>Next project →</a> : <span></span>}
     </nav>
   </article>
+
+  <script>
+    const mediaRoot = document.querySelector("[data-project-media]");
+    const mediaTrack = mediaRoot?.querySelector("[data-project-media-track]");
+    const mediaSlides = Array.from(mediaRoot?.querySelectorAll("[data-project-media-slide]") ?? []);
+    const mediaPrevious = mediaRoot?.querySelector("[data-project-media-prev]");
+    const mediaNext = mediaRoot?.querySelector("[data-project-media-next]");
+    const mediaCount = mediaRoot?.querySelector("[data-project-media-count]");
+    let activeMedia = 0;
+
+    function renderProjectMedia() {
+      if (!(mediaTrack instanceof HTMLElement)) return;
+      mediaTrack.style.transform = `translate3d(${-activeMedia * 100}%, 0, 0)`;
+      mediaSlides.forEach((slide, index) => slide.toggleAttribute("aria-current", index === activeMedia));
+      if (mediaCount) mediaCount.textContent = `${activeMedia + 1} / ${mediaSlides.length}`;
+      mediaSlides.forEach((slide, index) => {
+        if (index === activeMedia) return;
+        slide.querySelectorAll("video").forEach((video) => video.pause());
+      });
+    }
+
+    function moveProjectMedia(delta) {
+      if (mediaSlides.length < 2) return;
+      activeMedia = (activeMedia + delta + mediaSlides.length) % mediaSlides.length;
+      renderProjectMedia();
+    }
+
+    mediaPrevious?.addEventListener("click", () => moveProjectMedia(-1));
+    mediaNext?.addEventListener("click", () => moveProjectMedia(1));
+    renderProjectMedia();
+  </script>
 </BaseLayout>

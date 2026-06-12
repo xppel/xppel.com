@@ -11,10 +11,21 @@ type Props = {
 const { activeSlug = "" } = Astro.props;
 const projectGroups = await getProjectGroups();
 const isProjectsIndex = activeSlug === "projects";
+const previewModules = import.meta.glob("../content/projects/*/preview.gif", { eager: true });
+const normalizePreviewKey = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+const previewGifs = new Map(
+  Object.entries(previewModules).map(([path, module]) => {
+    const folder = path.split("/").at(-2) ?? "";
+    const image = (module as { default: { src: string } }).default;
+    return [normalizePreviewKey(folder), image.src] as const;
+  })
+);
 const previewImages = new Map(
   await Promise.all(
     projectGroups.flatMap((group) =>
       group.projects.map(async (project) => {
+        const previewGif = previewGifs.get(normalizePreviewKey(project.data.slug));
+        if (previewGif) return [project.data.slug, previewGif] as const;
         const image = await getImage({
           src: project.data.thumbnail,
           width: 420,

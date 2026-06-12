@@ -7,8 +7,7 @@ Example:
 ```yaml
 ---
 title: "Track Name"
-date: "June 2026"
-order: 10
+order: 1
 audio: "./track-name.mp3"
 ---
 

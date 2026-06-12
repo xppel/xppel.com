@@ -2,12 +2,11 @@
 title: "Ripple"
 slug: "ripple"
 subtitle: "Productivity-focused management & operations PDA."
-year: 2025
-order: 30
+projectId: 5
+completed: "2025-05"
 thumbnail: "./thumbnail.png"
 home:
   show: true
-  order: 30
 frame:
   type: "image"
   image: "./thumbnail.png"
@@ -28,7 +27,6 @@ taxonomy:
     - "Consumer electronics"
     - "Industrial tools"
 info:
-  date: "May 2025"
   locationClient: "Brunel University London"
   notes:
     - text: "Module: Human Factors (Year 3)."

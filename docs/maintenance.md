@@ -32,16 +32,30 @@ Important fields:
 - `title`: Display title.
 - `slug`: Public route segment used by `/projects/[slug]/`.
 - `subtitle`: Short project deck line.
-- `year` and `order`: Used for desktop navigation grouping and ordering.
+- `projectId`: Display order. IDs should increase from oldest to newest; the site sorts higher IDs first.
+- `completed`: Month completed, formatted as `YYYY-MM`. This drives visible date labels and year dividers.
 - `thumbnail`: Local image used in the homepage slideshow, project index, and nav preview.
-- `home.show` and `home.order`: Controls homepage slideshow inclusion and order.
-- `frame`: Primary project media. Use `type: "image"` with `image`, or `type: "video"` with `poster` and `sources`.
+- `home.show`: Controls homepage slideshow inclusion.
+- `frame`: Primary project media. Use `type: "image"` with `image`, `type: "video"` with `poster` and `sources`, or `type: "youtube"` with `videoId` and `title`.
 - `taxonomy`: Filter/search categories.
-- `info`: Project date, location/client, and notes.
-- `gallery`: Optional additional images or videos.
+- `info`: Project location/client and notes.
+- `gallery`: Optional additional images, videos, YouTube embeds, or GIFs. These are shown in the project media carousel.
 - `portfolioLink`: Shows the portfolio PDF sentence on the project page.
 
 Keep project images next to the project entry so Astro can validate and optimize them.
+
+When adding a new project, use the next highest `projectId`. The desktop nav year dividers are generated from `completed`, so a new year appears automatically when needed.
+
+To add a hover preview animation, place a file named `preview.gif` in the project folder. The project index card will fade to it on hover/focus, and the desktop nav hover preview will use it instead of the static thumbnail.
+
+Example YouTube gallery item:
+
+```yaml
+gallery:
+  - type: "youtube"
+    videoId: "VIDEO_ID"
+    title: "Project demo"
+```
 
 ### Photos
 
@@ -62,12 +76,9 @@ Music folders live at `src/content/music/<folder>/index.md`.
 Fields:
 
 - `title`
-- `date`
 - `order`
 - `audio` optional
 - `hidden` optional
-
-The placeholder entry keeps the collection initialized until real tracks are added.
 
 ## Images
 
@@ -96,6 +107,7 @@ The homepage slideshow lives in `src/pages/index.astro`, with layout styles in `
 Implementation notes:
 
 - The slideshow list is built from projects where `home.show` is true.
+- Slides are ordered by `projectId`, highest first.
 - A cloned first slide is appended to support forward looping.
 - Each slide wraps the optimized image in `.home-slide-frame`; the frame owns rounded corners and clipping.
 - JavaScript measures the `.home-slider` width and moves the track with pixel-based `translate3d(...)`.
@@ -135,6 +147,7 @@ Desktop navigation is fixed on the left. Mobile uses a top header, quick links, 
 Project navigation data comes from `getProjectGroups()` in `src/data/projects.ts`.
 
 The project hover preview uses a generated WebP preview URL from `getImage()` to keep the preview lightweight.
+If `preview.gif` exists in a project folder, that GIF is used in the nav preview instead.
 
 ## Lightbox
 

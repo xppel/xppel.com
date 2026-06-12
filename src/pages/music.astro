@@ -3,19 +3,11 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import { getRenderableTracks } from "../data/music";
 
 const trackItems = await getRenderableTracks();
-const placeholderTracks = [
-  { title: "Track One Name", date: "Date" },
-  { title: "Track Two Name", date: "Date" },
-  { title: "Track Three Name", date: "Date" }
-];
-const visibleTracks = trackItems.length
-  ? trackItems.map((item) => ({
-      title: item.track.data.title,
-      date: item.track.data.date,
-      audio: item.audio,
-      Content: item.Content
-    }))
-  : placeholderTracks.map((track) => ({ ...track, audio: "", Content: null }));
+const visibleTracks = trackItems.map((item) => ({
+  title: item.track.data.title,
+  audio: item.audio,
+  Content: item.Content
+}));
 ---
 
 <BaseLayout title="Music" activeSlug="music" description="Music and audio work by Andrew Appel.">
@@ -29,10 +21,22 @@ const visibleTracks = trackItems.length
         const Content = item.Content;
         return (
           <li>
-            <span class="track-heading">{index + 1}.&nbsp; {item.title} - <em>{item.date}</em></span>
+            <span class="track-heading">{index + 1}.&nbsp; {item.title}</span>
             {Content ? <Content /> : null}
             {item.audio ? (
-              <audio controls preload="none" src={item.audio} aria-label={`${item.title} by Andrew Appel`}></audio>
+              <div class="audio-player" data-audio-player>
+                <audio preload="metadata" src={item.audio} aria-label={`${item.title} by Andrew Appel`} data-audio></audio>
+                <button class="audio-player-button" type="button" aria-label={`Play ${item.title}`} data-audio-toggle>▶</button>
+                <div class="audio-player-progress">
+                  <input class="audio-player-seek" type="range" min="0" max="1000" value="0" step="1" aria-label={`Seek ${item.title}`} data-audio-seek />
+                </div>
+                <span class="audio-player-time" data-audio-time>0:00</span>
+                <label class="audio-player-volume">
+                  <span class="visually-hidden">Volume for {item.title}</span>
+                  <span aria-hidden="true">vol</span>
+                  <input type="range" min="0" max="1" value="1" step="0.01" data-audio-volume />
+                </label>
+              </div>
             ) : (
               <div class="audio-placeholder" role="img" aria-label={`${item.title} by Andrew Appel audio placeholder`}>
                 <span class="audio-placeholder-button">▶</span>
@@ -47,4 +51,91 @@ const visibleTracks = trackItems.length
 
     <p class="music-note">At this time I have not officially released any music.</p>
   </section>
+
+  <script>
+    const audioPlayers = Array.from(document.querySelectorAll("[data-audio-player]"));
+
+    function formatAudioTime(value) {
+      if (!Number.isFinite(value) || value <= 0) return "0:00";
+      const minutes = Math.floor(value / 60);
+      const seconds = Math.floor(value % 60).toString().padStart(2, "0");
+      return `${minutes}:${seconds}`;
+    }
+
+    audioPlayers.forEach((player) => {
+      if (!(player instanceof HTMLElement)) return;
+      const audio = player.querySelector("[data-audio]");
+      const toggle = player.querySelector("[data-audio-toggle]");
+      const seek = player.querySelector("[data-audio-seek]");
+      const time = player.querySelector("[data-audio-time]");
+      const volume = player.querySelector("[data-audio-volume]");
+      if (!(audio instanceof HTMLAudioElement) || !(toggle instanceof HTMLButtonElement) || !(seek instanceof HTMLInputElement)) return;
+
+      function setProgress() {
+        const duration = audio.duration || 0;
+        const progress = duration ? audio.currentTime / duration : 0;
+        seek.value = String(Math.round(progress * Number(seek.max)));
+        seek.style.setProperty("--audio-progress", `${progress * 100}%`);
+        if (time) time.textContent = formatAudioTime(audio.currentTime);
+      }
+
+      function setVolumeDisplay() {
+        if (!(volume instanceof HTMLInputElement)) return;
+        volume.style.setProperty("--audio-progress", `${Number(volume.value) * 100}%`);
+      }
+
+      function setPlayingState() {
+        const isPlaying = !audio.paused;
+        player.toggleAttribute("data-playing", isPlaying);
+        player.removeAttribute("data-audio-error");
+        toggle.textContent = isPlaying ? "Ⅱ" : "▶";
+        toggle.setAttribute("aria-label", `${isPlaying ? "Pause" : "Play"} ${audio.getAttribute("aria-label") ?? "track"}`);
+      }
+
+      toggle.addEventListener("click", async () => {
+        if (audio.paused) {
+          audioPlayers.forEach((otherPlayer) => {
+            if (otherPlayer === player) return;
+            const otherAudio = otherPlayer.querySelector("[data-audio]");
+            if (otherAudio instanceof HTMLAudioElement) otherAudio.pause();
+          });
+          try {
+            await audio.play();
+          } catch {
+            player.setAttribute("data-audio-error", "playback-blocked");
+            setPlayingState();
+          }
+        } else {
+          audio.pause();
+        }
+      });
+
+      seek.addEventListener("input", () => {
+        const duration = audio.duration || 0;
+        if (!duration) return;
+        audio.currentTime = (Number(seek.value) / Number(seek.max)) * duration;
+        setProgress();
+      });
+
+      volume?.addEventListener("input", () => {
+        if (!(volume instanceof HTMLInputElement)) return;
+        audio.volume = Number(volume.value);
+        setVolumeDisplay();
+      });
+
+      audio.addEventListener("loadedmetadata", setProgress);
+      audio.addEventListener("timeupdate", setProgress);
+      audio.addEventListener("play", setPlayingState);
+      audio.addEventListener("pause", setPlayingState);
+      audio.addEventListener("ended", () => {
+        audio.currentTime = 0;
+        setProgress();
+        setPlayingState();
+      });
+
+      setProgress();
+      setVolumeDisplay();
+      setPlayingState();
+    });
+  </script>
 </BaseLayout>

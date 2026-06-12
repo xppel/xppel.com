@@ -2,12 +2,11 @@
 title: "FlipGrip"
 slug: "flipgrip"
 subtitle: "Ergonomic mechanical grip assembly for caulking tool."
-year: 2023
-order: 10
+projectId: 4
+completed: "2023-03"
 thumbnail: "./thumbnail.png"
 home:
   show: true
-  order: 40
 frame:
   type: "image"
   image: "./thumbnail.png"
@@ -24,7 +23,6 @@ taxonomy:
     - "Industrial tools"
     - "Sport/health/wellness"
 info:
-  date: "March 2023"
   locationClient: "Brunel University London"
   notes:
     - text: "Module: Design Process (Year 2)."
