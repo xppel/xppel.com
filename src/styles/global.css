@@ -1472,16 +1472,17 @@ p + p {
   margin-top: 2rem;
 }
 
-.about-intro {
-  margin-bottom: 3rem;
-}
-
 .about-note p + p {
   margin-top: 0;
 }
 
+.about-intro {
+  margin-bottom: 0;
+}
+
 .about-copy {
   max-width: none;
+  border-top-width: 0;
 }
 
 .contact-links {
@@ -1783,7 +1784,13 @@ p + p {
   }
 
   .project-intro {
+    gap: 0;
     margin-bottom: 0;
+  }
+
+  .about-intro,
+  .about-copy {
+    gap: 0;
   }
 
   .project-body {

@@ -1,83 +1,81 @@
 # XPPEL.COM
 
-Static Astro portfolio site for Andrew Appel.
+Portfolio website for Andrew Appel: design, engineering, creative technology, photography, and music.
 
-## Overview
+The site is built with [Astro](https://astro.build/) and published at [xppel.com](https://xppel.com). It is a static site with project, photo, and music content managed through local Markdown entries and colocated media assets.
 
-This repository contains the source for `xppel.com`, a static portfolio built with Astro content collections. Project, photo, and music entries are stored as Markdown content with colocated media assets. The production build is emitted to `dist/` and can be deployed to any static host.
+## Highlights
 
-## Requirements
+- Project index with search, filters, responsive grid/list views, and year-based navigation.
+- Project pages with optimized images and support for image, GIF, video, and YouTube media.
+- Homepage slideshow of selected work.
+- Photo grid with optimized Astro images.
+- Custom audio players for music.
+- GitHub Pages deployment through GitHub Actions.
 
-- Node.js 24 recommended for GitHub Actions parity
-- Node.js 20 or newer for local development
-- npm
+## Tech Stack
 
-## Getting Started
+- Astro
+- TypeScript-flavored Astro components
+- Astro content collections
+- Astro image optimization
+- GitHub Pages and GitHub Actions
+
+## Local Development
 
 ```sh
 npm install
 npm run dev
 ```
 
-The dev server will print a local URL, usually `http://localhost:4321/`.
+The dev server usually runs at `http://localhost:4321/`.
 
-For a clean install in CI or after cloning, use:
-
-```sh
-npm ci
-```
-
-## Commands
+Useful commands:
 
 ```sh
 npm run dev
 npm run build
 npm run preview
+npm ci
 ```
 
-- `npm run dev` starts the local development server.
-- `npm run build` writes the static production site to `dist/`.
-- `npm run preview` serves the production build locally.
-- `npm ci` installs exact dependency versions from `package-lock.json`.
+`npm run build` should pass before pushing layout, schema, media, or route changes.
 
 ## Project Structure
 
-- `src/pages/` contains route-level Astro pages.
-- `src/layouts/BaseLayout.astro` contains shared document chrome, metadata, footer, and lightbox behavior.
-- `src/components/` contains shared UI pieces such as navigation chrome and icons.
-- `src/content/` contains editable project, photo, and music entries.
-- `src/content.config.ts` defines content schemas and validates frontmatter.
-- `src/data/` contains shared data helpers and site metadata.
-- `src/styles/global.css` contains the site-wide layout, typography, responsive rules, and interaction styling.
-- `public/assets/` contains static files that should be copied as-is, including PDFs.
-- `docs/maintenance.md` explains how the site is organized and how to make common updates safely.
+- `src/pages/` contains the site routes.
+- `src/components/` contains shared UI components.
+- `src/layouts/BaseLayout.astro` contains shared page chrome, metadata, footer, and lightbox behavior.
+- `src/content/` contains project, photo, and music entries.
+- `src/content.config.ts` validates content collection frontmatter.
+- `src/data/` contains shared site data and collection helpers.
+- `src/styles/global.css` contains the main visual system and responsive rules.
+- `public/` contains static files copied through unchanged, including PDFs, `CNAME`, and `.nojekyll`.
+- `docs/maintenance.md` documents content conventions and common maintenance tasks.
 
-## Content Updates
+## Content
 
-Project entries live in `src/content/projects/<project>/index.md`.
-Photo entries live in `src/content/photos/<photo>/index.md`.
-Music entries live in `src/content/music/<track>/index.md`.
+Projects live in `src/content/projects/<project>/index.md`.
 
-Images that are displayed on pages should stay in `src/content/` next to their content entry so Astro can optimize them. Files in `public/` are served unchanged and are best for downloads, favicons, and other assets that should keep a stable public URL.
+Photos live in `src/content/photos/<photo>/index.md`.
+
+Music tracks live in `src/content/music/<track>/index.md`.
+
+Images that are rendered on the site should generally live beside their content entry in `src/content/` so Astro can optimize and validate them. Files that need stable public URLs, such as PDFs or favicons, belong in `public/`.
 
 ## Deployment
 
-The site is configured with `site: "https://xppel.com"` in `astro.config.mjs`.
-GitHub Pages deployment is handled by `.github/workflows/deploy.yml`.
+The site deploys to GitHub Pages through `.github/workflows/deploy.yml`.
 
-On GitHub:
+Repository Pages settings should use:
 
-1. Open the repository settings.
-2. Go to **Pages**.
-3. Set **Source** to **GitHub Actions**.
-4. Set the custom domain to `xppel.com`.
-5. Enable **Enforce HTTPS** once GitHub makes it available.
+- **Source:** GitHub Actions
+- **Custom domain:** `xppel.com`
+- **HTTPS:** enforced when available
 
-The `public/CNAME` file also contains `xppel.com`, so the custom domain is included in the built site.
+If GitHub shows a **Build with Jekyll** job, Pages is still set to branch publishing. Switch the Pages source to **GitHub Actions** so Astro builds and deploys the site.
 
-If GitHub shows a **Build with Jekyll** job, Pages is still set to branch publishing. Switch the Pages source to **GitHub Actions** and push `.github/workflows/deploy.yml`.
-
-For the apex domain `xppel.com`, configure these DNS `A` records at the domain provider:
+For the apex domain, GitHub Pages expects these `A` records:
 
 ```txt
 185.199.108.153
@@ -95,12 +93,10 @@ Optional IPv6 `AAAA` records:
 2606:50c0:8003::153
 ```
 
-For `www.xppel.com`, add a `CNAME` record pointing to `xppel.github.io`.
+For `www.xppel.com`, use a `CNAME` record pointing to `xppel.github.io`.
 
-Run `npm run build` before pushing changes that affect content schemas, image usage, layout code, or routes.
+## Repository Notes
 
-## Git Notes
+Generated and local-only folders are ignored, including `node_modules/`, `dist/`, `.astro/`, and local archive folders beginning with `_`.
 
-Do not commit generated or local-only folders such as `node_modules/`, `dist/`, `.astro/`, or the local source/archive folders prefixed with `_`. They are ignored in `.gitignore`.
-
-Commit source files, content entries, optimized-site source assets under `src/content/`, public assets under `public/`, documentation, and lockfiles.
+Commit source files, content entries, public assets, documentation, and lockfiles.

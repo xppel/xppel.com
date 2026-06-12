@@ -1,4 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" fill="#000"/>
-  <text x="8" y="43" fill="#fff" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="700">A.</text>
+  <style>
+    .mark { fill: #050505; }
+    @media (prefers-color-scheme: dark) {
+      .mark { fill: #ffffff; }
+    }
+  </style>
+  <path class="mark" d="M5.4 56 27.9 8h8.2l22.5 48H47.5l-4.7-10.6H21.2L16.5 56H5.4Zm19.7-19.8h13.8L32 20.1 25.1 36.2Z"/>
+  <circle class="mark" cx="56" cy="50.6" r="5.4"/>
 </svg>

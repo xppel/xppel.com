@@ -49,21 +49,15 @@ const slides = projects.length ? [...projects, projects[0]] : [];
     const autoplayDelay = 3750;
     let autoplay = 0;
     let current = 0;
-    let slideWidth = 0;
     let isSnapping = false;
     let isTransitioning = false;
 
-    function measureSlide() {
-      if (!(slider instanceof HTMLElement)) return 0;
-      slideWidth = slider.getBoundingClientRect().width;
-      return slideWidth;
-    }
-
     function render(animate = true) {
       if (!(track instanceof HTMLElement)) return;
-      const width = slideWidth || measureSlide();
+      const activeSlide = slides[current];
+      const x = activeSlide instanceof HTMLElement ? activeSlide.offsetLeft : 0;
       track.style.transition = animate ? "" : "none";
-      track.style.transform = `translate3d(${-current * width}px, 0, 0)`;
+      track.style.transform = `translate3d(${-x}px, 0, 0)`;
       slides.forEach((slide, index) => slide.toggleAttribute("aria-current", index === current || (current === slideCount && index === 0)));
     }
 
@@ -125,12 +119,8 @@ const slides = projects.length ? [...projects, projects[0]] : [];
       if (event.key === "ArrowLeft") move(-1, true);
       if (event.key === "ArrowRight") move(1, true);
     });
-    window.addEventListener("resize", () => {
-      measureSlide();
-      render(false);
-    });
+    window.addEventListener("resize", () => render(false));
     mediaQuery.addEventListener("change", startAutoplay);
-    measureSlide();
     render();
     startAutoplay();
   </script>

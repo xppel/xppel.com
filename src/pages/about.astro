@@ -6,21 +6,23 @@ import { site } from "../data/site";
 
 <BaseLayout title="About" activeSlug="about" description="About Andrew Appel.">
   <section class="about-page">
-    <header class="two-column about-intro">
-      <h1>I’m Andrew, a multimedia<br />designer + engineer + artist.</h1>
-      <div class="caption about-note">
+    <header class="two-column about-intro project-rule-grid">
+      <div class="project-rule-cell">
+        <h1>I’m Andrew, a multimedia<br />designer + engineer + artist.</h1>
+      </div>
+      <div class="caption about-note project-rule-cell">
         <p>I’m currently based in New York.</p>
         <p>For me, the time is <span data-clock>--:--:-- --</span>.</p>
         <p>Contact information at the links below.</p>
       </div>
     </header>
 
-    <section class="two-column about-copy">
-      <div>
+    <section class="two-column about-copy project-rule-grid">
+      <div class="project-rule-cell">
         <p>Thanks for checking out my work!</p>
         <p>Since graduating, I've been working on a few personal projects that I’ve been using as a chance to teach myself more about designing embedded systems, working with electronics, UI & UX design, web development, and DSP.</p>
       </div>
-      <div>
+      <div class="project-rule-cell">
           <p>Currently, I’m developing a variety of products including hardware music production devices, web & app based services, sound visualization algos, and other cool stuff.</p>
           <nav class="contact-links" aria-label="Contact links">
             <span class="contact-row">
