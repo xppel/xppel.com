@@ -6,9 +6,10 @@ This guide documents the current Astro site structure and the conventions to fol
 
 The site is a static Astro project. Most pages are generated from content collections, with shared chrome and scripts kept in Astro components and layout files.
 
-- `src/layouts/BaseLayout.astro` wraps every page, sets metadata, renders the footer, and owns the site-wide lightbox.
+- `src/layouts/BaseLayout.astro` wraps every page, sets metadata, renders the footer, and provides the site-wide lightbox shell.
 - `src/components/SiteChrome.astro` renders desktop navigation, mobile navigation, the floating logo, and project hover previews.
 - `src/components/Icon.astro` centralizes inline icon rendering.
+- `src/scripts/site.ts` initializes app-style navigation, page swaps, chrome behavior, sliders, swipe gestures, the lightbox, project index controls, and page-specific reinitializers.
 - `src/pages/index.astro` renders the homepage slideshow.
 - `src/pages/projects/index.astro` renders the searchable/filterable project index.
 - `src/pages/projects/[slug].astro` renders individual project pages from project content entries.
@@ -90,15 +91,23 @@ Current responsive image surfaces:
 - Project index cards: `src/pages/projects/index.astro`
 - Project detail media and gallery: `src/pages/projects/[slug].astro`
 - Photo grid: `src/pages/photos.astro`
-- Nav hover previews: generated with `getImage()` in `src/components/SiteChrome.astro`
+- Nav hover previews: generated at a fixed 3:2 crop with `getImage()` in `src/components/SiteChrome.astro`
 
 Lightbox links intentionally point at the original image asset URL (`image.src`) so users can open the full image, while the displayed thumbnail/page image is optimized by Astro.
+
+Desktop nav previews should stay visually consistent:
+
+- Static thumbnail previews are generated as cropped `420x280` WebP images.
+- The preview frame uses a fixed `3 / 2` aspect ratio and `object-fit: cover`.
+- If `preview.gif` exists in a project folder, the GIF bypasses Astro transforms and is cropped by the same preview frame.
+- Preview image state is cleared when hiding/loading so stale image dimensions do not flash.
 
 Use `public/` for files that should not be transformed, such as:
 
 - PDFs
 - favicons
 - static files that need a stable public path
+- committed social preview images
 
 ## Homepage Slideshow
 
@@ -113,8 +122,10 @@ Implementation notes:
 - JavaScript measures the `.home-slider` width and moves the track with pixel-based `translate3d(...)`.
 - The pixel-based transform avoids percentage rounding drift and keeps slide endpoints exact.
 - The transition is defined on `.home-track`.
-- Previous/next zones are invisible full-height buttons over the left and right sides.
+- Previous/next zones are calculated from the visible `.home-slide-frame`, not the larger slideshow container.
 - Arrow keys also move the slideshow.
+- Horizontal pointer swipes move slides on touch devices while preserving normal vertical page scrolling.
+- Autoplay runs at 2800ms and does not slow down on hover.
 
 When changing the slideshow, verify:
 
@@ -123,6 +134,8 @@ When changing the slideshow, verify:
 - The transform endpoint equals `-(currentSlide * sliderWidth)`.
 - The clone reset is not visible at the end of the loop.
 - Mobile still uses a single-column header and a 50vh slideshow area.
+- Click and scroll interaction zones match the visible image frame.
+- Swipe gestures do not trigger accidental link clicks unless the horizontal drag threshold is crossed.
 
 ## Floating Logo
 
@@ -146,8 +159,37 @@ Desktop navigation is fixed on the left. Mobile uses a top header, quick links, 
 
 Project navigation data comes from `getProjectGroups()` in `src/data/projects.ts`.
 
-The project hover preview uses a generated WebP preview URL from `getImage()` to keep the preview lightweight.
-If `preview.gif` exists in a project folder, that GIF is used in the nav preview instead.
+Site navigation is enhanced in `src/scripts/site.ts`:
+
+- Same-origin internal links are intercepted when they can be handled safely.
+- The next document is fetched, parsed, and only `main#main` is swapped.
+- `<title>`, body/page state, active navigation state, and the mobile menu state are updated after swaps.
+- The native View Transition API is used when available.
+- External links, downloads, file links, modifier-clicks, hash-only jumps, and failed fetches fall back to normal browser navigation.
+- `xppel:page-load` fires after the initial load and after enhanced swaps so page initializers can re-bind idempotently.
+
+Nav labels use `.nav-stable-link` plus `data-nav-label` to reserve the bold active-label width. This keeps desktop side-nav arrows and neighboring mobile quick links from moving when the active page becomes heavier.
+
+The skip-to-content link was removed intentionally because it appeared visually during normal browsing. Keep `main#main` in place for landmarks and page swaps.
+
+The project hover preview uses a generated, cropped WebP preview URL from `getImage()` to keep the preview lightweight. If `preview.gif` exists in a project folder, that GIF is used in the nav preview instead.
+
+## Project Index
+
+The project index is server-rendered and then hydrated by `src/scripts/site.ts`.
+
+Implementation notes:
+
+- A small head boot script reads URL/session state and sets initial project index view/size attributes before first paint.
+- CSS mirrors those attributes so the selected view and size are applied before JavaScript hydration finishes.
+- Hydrated controls remain the source of truth after load and after app-style navigation swaps.
+- Mobile grid sizes are fixed as `S = 4`, `M = 3`, and `L = 2` columns.
+- Mobile list view uses larger images than desktop list view.
+- Mobile list size `S` hides summary text.
+- Mobile list sizes `M` and `L` let summaries fill remaining text-column height, so larger frames naturally show more text.
+- Tags are kept to one compact visual line on mobile.
+
+When changing project index controls, verify there is no visible size/view flicker on direct `/projects/` loads or when navigating back to `/projects/` through app-style navigation.
 
 ## Lightbox
 
@@ -156,6 +198,15 @@ The lightbox is defined in `src/layouts/BaseLayout.astro`.
 Any anchor with `data-lightbox-item` participates in the lightbox. Items are sorted by `data-lightbox-index`.
 
 The rendered image in the page can be optimized by Astro, but the anchor `href` should point to the original image URL so the lightbox can open the full image.
+
+Implementation notes:
+
+- Opening starts immediately from the clicked thumbnail/current image rect.
+- The clicked thumbnail is used as the first visible placeholder while the full image decodes in the background.
+- When the full image is ready, it swaps into the same frame.
+- Closing animates back to the triggering image rect and fades the backdrop before hiding the lightbox.
+- Escape closes without restoring a visible blue focus ring.
+- Horizontal swipes move between lightbox items when multiple images are available.
 
 ## Footer
 
@@ -170,6 +221,9 @@ The displayed update date comes from `site.updated` in `src/data/site.ts`. Updat
 - Avoid changing global `img` rules to fix one page. Prefer page-specific classes such as `.home-slide-frame` or `.project-card-thumb`.
 - Keep interactive hit areas stable with explicit dimensions or fixed containers.
 - For image surfaces, put border radius and clipping on a stable wrapper when Astro image output or object-fit behavior could vary.
+- Visible browser focus outlines are intentionally suppressed throughout the site. Use hover, active, selected, opacity, and border treatments for interaction feedback.
+- When active text gets heavier, reserve the heavier width with hidden sizing content instead of allowing neighboring nav items or arrows to shift.
+- Keep the centered site shell capped at the desktop max width so ultrawide screens show even black margins outside the site.
 
 ## QA Checklist
 
@@ -188,13 +242,23 @@ Browser-check:
 - Photos page.
 - Mobile menu open/close.
 - Lightbox open/close.
+- App-style navigation between homepage, projects, project detail pages, photos, music, and about.
+- Browser back/forward after app-style navigation.
 
 Specific visual checks:
 
 - Floating logo fades in after it is positioned.
 - Homepage slideshow images are centered, contained, and rounded.
 - Slideshow motion lands exactly on slide boundaries.
+- Homepage slideshow speed does not change on hover.
+- Homepage slideshow and lightbox respond to horizontal swipes on touch devices.
 - Project cards do not crop thumbnails unexpectedly.
+- Project index direct load does not flicker between view or size states.
+- Mobile grid sizes render as S = 4, M = 3, and L = 2 columns.
+- Mobile list size S hides summaries, while M and L show adaptive summaries.
 - Photo grid images load with correct aspect ratios.
+- Desktop nav previews are consistently cropped 3:2 with no black bars.
+- Desktop and mobile nav labels do not shift when active text gets heavier.
+- Lightbox Escape followed by Space/Tab does not show a blue focus ring.
 - Footer date is accurate.
 - No console errors or framework overlays.

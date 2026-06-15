@@ -39,21 +39,4 @@ import { site } from "../data/site";
     </section>
   </section>
 
-  <script>
-    const clock = document.querySelector("[data-clock]");
-    const formatter = new Intl.DateTimeFormat("en-US", {
-      timeZone: "America/New_York",
-      hour: "numeric",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true
-    });
-
-    function updateClock() {
-      if (clock) clock.textContent = formatter.format(new Date());
-    }
-
-    updateClock();
-    setInterval(updateClock, 1000);
-  </script>
 </BaseLayout>

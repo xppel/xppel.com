@@ -34,6 +34,6 @@ portfolioLink: true
 
 Trax is a concept for discreet, non-invasive glucose monitoring and health tracking designed to support holistic wellness for people in urban environments.
 
-By passively tracking biomarkers and insulin response during sedentary moments especially after meals, the insole encourages light activity through subtle prompts to help users naturally regulate their blood sugar levels.
+By passively tracking biomarkers and insulin response during sedentary moments, especially after meals, the insole encourages light activity through subtle prompts to help users naturally regulate their blood sugar levels.
 
-The project prioritized dignity, routine, and future-ready health insights without disrupting life or being invasive.
+The project prioritized dignity, routine, and future-ready health insights, aiming to make preventative care feel discreet rather than clinical or invasive.

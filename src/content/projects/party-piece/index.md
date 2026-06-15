@@ -31,6 +31,6 @@ info:
 portfolioLink: false
 ---
 
-This was a personal project for which I designed a set of wireless speakers that connected magnetically to pair and play music in sync, even after being disconnected.
+This was a personal project exploring a set of wireless speakers that could connect magnetically, pair automatically, and keep playing music in sync even after being disconnected.
 
-It was inspired by the way Lego bricks connect to each other, as well as by the GoPro system. I made a mounting mechanism standard to create a range of accessories to hot-swap and mount speakers on bikes, surfboards, etc.
+It was inspired by the way Lego bricks connect to each other, as well as the GoPro mounting system. I designed a shared mounting standard so speakers could be hot-swapped between accessories for bikes, surfboards, and other outdoor setups.

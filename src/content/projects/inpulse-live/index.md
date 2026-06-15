@@ -38,6 +38,6 @@ portfolioLink: true
 
 InPulse (Live) was the final project of my undergraduate degree. It was selected for exhibition at Europe’s largest graduate design showcase, New Designers, in 2025.
 
-My aim was to design a hardware system for live electronic music production and performance, integrating sequencing, mixing, and sound design.
+My aim was to design a hardware system for live electronic music production and performance, integrating sequencing, mixing, and sound design into one playable interface.
 
-I built a functional prototype using a Raspberry Pi and a custom embedded MCU MIDI control interface, as well as an an accurate visual model, and PCB designs.
+I built a functional prototype using a Raspberry Pi and a custom embedded MCU MIDI control interface, alongside an accurate visual model and PCB designs for the hardware architecture.

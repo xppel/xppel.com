@@ -62,7 +62,6 @@ const projects = defineCollection({
         locationClient: z.string(),
         notes: z.array(noteSchema).default([])
       }),
-      gallery: z.array(projectMediaSchema({ image })).default([]),
       portfolioLink: z.boolean().default(false)
     })
 });

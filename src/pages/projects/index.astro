@@ -97,7 +97,7 @@ const jsonLd = {
                     src={project.data.thumbnail}
                     alt=""
                     widths={[240, 360, 520, 760]}
-                    sizes="(max-width: 760px) 50vw, 33vw"
+                    sizes="(max-width: 760px) 33vw, 33vw"
                     loading={thumbnailLoading}
                     decoding="async"
                   />
@@ -126,114 +126,4 @@ const jsonLd = {
     <p class="projects-empty" hidden data-project-empty>No projects match those filters.</p>
   </section>
 
-  <script>
-    const root = document.querySelector("[data-projects-index]");
-    const searchInput = root?.querySelector("[data-project-search]");
-    const clearFilters = root?.querySelector("[data-clear-filters]");
-    const filterToggle = root?.querySelector("[data-filter-toggle]");
-    const filterPanel = root?.querySelector("[data-filter-panel]");
-    const filters = Array.from(root?.querySelectorAll("[data-project-filter]") ?? []);
-    const cards = Array.from(root?.querySelectorAll("[data-project-card]") ?? []);
-    const count = root?.querySelector("[data-project-count]");
-    const empty = root?.querySelector("[data-project-empty]");
-    const viewButtons = Array.from(root?.querySelectorAll("[data-view-mode]") ?? []);
-    const sizeButtons = Array.from(root?.querySelectorAll("[data-size-step]") ?? []);
-    const sizes = ["s", "m", "l"];
-
-    function readParams() {
-      const params = new URLSearchParams(window.location.search);
-      const selectedTags = new Set(params.getAll("tag"));
-      return {
-        q: params.get("q") ?? "",
-        view: "grid",
-        size: "m",
-        selectedTags
-      };
-    }
-
-    function writeParams({ q, view, size, selectedTags }) {
-      const params = new URLSearchParams();
-      if (q) params.set("q", q);
-      selectedTags.forEach((tag) => params.append("tag", tag));
-      const query = params.toString();
-      window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
-    }
-
-    function getState() {
-      return {
-        q: searchInput instanceof HTMLInputElement ? searchInput.value.trim().toLowerCase() : "",
-        view: root?.getAttribute("data-view") === "list" ? "list" : "grid",
-        size: root?.getAttribute("data-size") ?? "m",
-        selectedTags: new Set(filters.filter((filter) => filter instanceof HTMLInputElement && filter.checked).map((filter) => filter.value))
-      };
-    }
-
-    function applyState(state, updateUrl = true) {
-      if (!(root instanceof HTMLElement)) return;
-      root.setAttribute("data-view", state.view);
-      root.setAttribute("data-size", state.size);
-      if (searchInput instanceof HTMLInputElement) searchInput.value = state.q;
-      filters.forEach((filter) => {
-        if (filter instanceof HTMLInputElement) filter.checked = state.selectedTags.has(filter.value);
-      });
-      viewButtons.forEach((button) => button.setAttribute("aria-pressed", String(button.getAttribute("data-view-mode") === state.view)));
-      if (clearFilters instanceof HTMLButtonElement) {
-        const hasTaxonomyFilters = state.selectedTags.size > 0;
-        clearFilters.hidden = !hasTaxonomyFilters;
-        clearFilters.disabled = !hasTaxonomyFilters;
-      }
-
-      let visible = 0;
-      cards.forEach((card) => {
-        if (!(card instanceof HTMLElement)) return;
-        const textMatch = !state.q || (card.dataset.search ?? "").includes(state.q);
-        const cardTags = new Set((card.dataset.tags ?? "").split(" ").filter(Boolean));
-        const selected = Array.from(state.selectedTags);
-        const tagMatch = !selected.length || selected.some((tag) => cardTags.has(tag));
-        const show = textMatch && tagMatch;
-        card.hidden = !show;
-        if (show) visible += 1;
-      });
-
-      if (count) count.textContent = `${visible} / ${cards.length} projects`;
-      if (empty instanceof HTMLElement) empty.hidden = visible > 0;
-      if (updateUrl) writeParams(state);
-    }
-
-    filterToggle?.addEventListener("click", () => {
-      if (!(filterPanel instanceof HTMLElement) || !(filterToggle instanceof HTMLElement)) return;
-      const open = filterPanel.hidden;
-      filterPanel.hidden = !open;
-      filterToggle.setAttribute("aria-expanded", String(open));
-    });
-
-    searchInput?.addEventListener("input", () => applyState(getState()));
-    filters.forEach((filter) => filter.addEventListener("change", () => applyState(getState())));
-    clearFilters?.addEventListener("click", () => {
-      const state = getState();
-      applyState({ ...state, selectedTags: new Set() });
-    });
-    viewButtons.forEach((button) => button.addEventListener("click", () => applyState({ ...getState(), view: button.getAttribute("data-view-mode") })));
-    sizeButtons.forEach((button) => button.addEventListener("click", () => {
-      const state = getState();
-      const nextIndex = Math.max(0, Math.min(sizes.length - 1, sizes.indexOf(state.size) + Number(button.getAttribute("data-size-step"))));
-      applyState({ ...state, size: sizes[nextIndex] });
-    }));
-
-    window.addEventListener("keydown", (event) => {
-      const active = document.activeElement;
-      const isTyping = active instanceof HTMLElement && ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName);
-      if (event.key === "/" && !isTyping) {
-        event.preventDefault();
-        if (searchInput instanceof HTMLInputElement) searchInput.focus();
-      }
-      if (isTyping) return;
-      if (event.key.toLowerCase() === "g") applyState({ ...getState(), view: "grid" });
-      if (event.key.toLowerCase() === "l") applyState({ ...getState(), view: "list" });
-      if (event.key === "+" || event.key === "=") sizeButtons.find((button) => button.getAttribute("data-size-step") === "1")?.dispatchEvent(new MouseEvent("click"));
-      if (event.key === "-") sizeButtons.find((button) => button.getAttribute("data-size-step") === "-1")?.dispatchEvent(new MouseEvent("click"));
-    });
-
-    applyState(readParams(), false);
-  </script>
 </BaseLayout>

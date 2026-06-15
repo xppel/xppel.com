@@ -6,11 +6,13 @@ The site is built with [Astro](https://astro.build/) and published at [xppel.com
 
 ## Highlights
 
-- Project index with search, filters, responsive grid/list views, and year-based navigation.
+- App-style navigation that swaps site content without reloading the full page when browsing internal routes.
+- Project index with search, filters, responsive grid/list views, stable mobile zoom levels, and year-based navigation.
 - Project pages with optimized images and support for image, GIF, video, and YouTube media.
-- Homepage slideshow of selected work.
+- Homepage slideshow of selected work with keyboard, click-zone, and touch-swipe navigation.
 - Photo grid with optimized Astro images.
 - Custom audio players for music.
+- Desktop project hover previews, a smooth shared lightbox, and a lightweight procedural logo click effect.
 - GitHub Pages deployment through GitHub Actions.
 
 ## Tech Stack
@@ -41,11 +43,15 @@ npm ci
 
 `npm run build` should pass before pushing layout, schema, media, or route changes.
 
+If `4321` is already in use, Astro will choose the next available local port.
+
 ## Project Structure
 
 - `src/pages/` contains the site routes.
 - `src/components/` contains shared UI components.
-- `src/layouts/BaseLayout.astro` contains shared page chrome, metadata, footer, and lightbox behavior.
+- `src/layouts/BaseLayout.astro` contains shared metadata, the footer, the lightbox shell, and script/style entry points.
+- `src/components/SiteChrome.astro` contains desktop/mobile navigation, the floating logo, and project hover preview markup.
+- `src/scripts/site.ts` contains app-style navigation, chrome initialization, lightbox behavior, sliders, swipe gestures, and page reinitializers.
 - `src/content/` contains project, photo, and music entries.
 - `src/content.config.ts` validates content collection frontmatter.
 - `src/data/` contains shared site data and collection helpers.
