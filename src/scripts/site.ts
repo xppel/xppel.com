@@ -1,13 +1,23 @@
 const PAGE_LOAD_EVENT = "xppel:page-load";
 const PROJECT_INDEX_PATH = "/projects/";
 const PROJECT_STATE_KEY = "xppel-project-index-state";
+const PROJECT_INDEX_SIZES = ["s", "m", "l"] as const;
 const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
 type ProjectIndexState = {
   q: string;
   view: "grid" | "list";
-  size: "s" | "m" | "l";
+  size: typeof PROJECT_INDEX_SIZES[number];
   selectedTags: Set<string>;
+};
+
+type ProjectIndexBootstrapState = {
+  view?: unknown;
+  size?: unknown;
+};
+
+type ProjectIndexWindow = Window & {
+  __xppelProjectIndexState?: ProjectIndexBootstrapState;
 };
 
 type ViewTransitionDocument = Document & {
@@ -28,6 +38,7 @@ let lightboxItems: HTMLAnchorElement[] = [];
 let lightboxClosing = false;
 let lightboxLoadToken = 0;
 const fetchedPages = new Map<string, Promise<string>>();
+const decodedImages = new Map<string, Promise<HTMLImageElement>>();
 
 function normalizePath(pathname: string) {
   if (pathname === "/projects") return PROJECT_INDEX_PATH;
@@ -115,15 +126,16 @@ function initMobileMenu() {
     if (!(link instanceof HTMLAnchorElement)) return;
     if (link.target || link.hasAttribute("download") || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     const url = new URL(link.href, window.location.href);
-    if (
-      url.origin === window.location.origin &&
-      url.pathname === window.location.pathname &&
+    const currentPath = normalizePath(window.location.pathname);
+    const targetPath = normalizePath(url.pathname);
+    const isSameUrl = url.origin === window.location.origin &&
+      targetPath === currentPath &&
       url.search === window.location.search &&
-      url.hash === window.location.hash
-    ) {
+      url.hash === window.location.hash;
+    if (isSameUrl || isCurrentHomePathNavigation(url)) {
       event.preventDefault();
     }
-  });
+  }, { capture: true });
 }
 
 function initBrandBouncers() {
@@ -403,9 +415,8 @@ function initNavPreview() {
   const preview = document.querySelector("[data-nav-preview]");
   const previewImage = document.querySelector("[data-nav-preview-img]");
   const previewLinks = Array.from(document.querySelectorAll("[data-project-preview]"));
-  const canHover = window.matchMedia("(pointer: fine)").matches;
 
-  if (!(preview instanceof HTMLElement) || !(previewImage instanceof HTMLImageElement) || !canHover) return;
+  if (!(preview instanceof HTMLElement) || !(previewImage instanceof HTMLImageElement)) return;
 
   let visible = false;
   let loadToken = 0;
@@ -415,6 +426,7 @@ function initNavPreview() {
   let stringStartY = 0;
   let x = 0;
   let y = 0;
+  const previewCache = new Map<string, Promise<HTMLImageElement>>();
 
   function previewSize() {
     return {
@@ -453,18 +465,38 @@ function initNavPreview() {
     requestAnimationFrame(animatePreview);
   }
 
-  async function preloadPreview(src: string) {
+  function preloadPreview(src: string) {
+    const cached = previewCache.get(src);
+    if (cached) return cached;
+
     const image = new Image();
     image.decoding = "async";
-    image.src = src;
-    if (image.decode) {
-      await image.decode();
-    } else if (!image.complete) {
-      await new Promise<void>((resolve, reject) => {
-        image.onload = () => resolve();
+    const load = new Promise<HTMLImageElement>((resolve, reject) => {
+      image.onerror = () => reject(new Error("Preview image failed"));
+      image.src = src;
+      if (image.decode) {
+        image.decode()
+          .then(() => {
+            if (image.naturalWidth > 0) {
+              resolve(image);
+            } else {
+              reject(new Error("Preview image failed"));
+            }
+          })
+          .catch(reject);
+      } else if (image.complete && image.naturalWidth > 0) {
+        resolve(image);
+      } else {
+        image.onload = () => resolve(image);
         image.onerror = () => reject(new Error("Preview image failed"));
-      });
-    }
+      }
+    }).catch((error) => {
+      previewCache.delete(src);
+      throw error;
+    });
+
+    previewCache.set(src, load);
+    return load;
   }
 
   function show(link: Element, event?: PointerEvent | MouseEvent | FocusEvent) {
@@ -489,13 +521,12 @@ function initNavPreview() {
     visible = true;
     preview.classList.add("is-loading");
     preview.classList.remove("is-visible");
-    previewImage.removeAttribute("src");
     previewImage.alt = "";
 
     preloadPreview(src)
-      .then(() => {
+      .then((image) => {
         if (!visible || token !== loadToken) return;
-        previewImage.src = src;
+        previewImage.src = image.currentSrc || image.src || src;
         previewImage.alt = link.dataset.previewTitle ?? "";
         preview.classList.remove("is-loading");
         preview.classList.add("is-visible");
@@ -504,7 +535,6 @@ function initNavPreview() {
         if (token !== loadToken) return;
         visible = false;
         preview.classList.remove("is-loading", "is-visible");
-        previewImage.removeAttribute("src");
         previewImage.alt = "";
       });
   }
@@ -523,14 +553,22 @@ function initNavPreview() {
     visible = false;
     loadToken += 1;
     preview.classList.remove("is-loading", "is-visible");
-    previewImage.removeAttribute("src");
     previewImage.alt = "";
   }
 
   previewLinks.forEach((link) => {
+    const previewSrc = link instanceof HTMLElement ? link.dataset.previewSrc : "";
+    if (previewSrc) preloadPreview(previewSrc).catch(() => undefined);
+
     if ("PointerEvent" in window) {
-      link.addEventListener("pointerenter", (event) => show(link, event));
-      link.addEventListener("pointermove", (event) => move(link, event));
+      link.addEventListener("pointerenter", (event) => {
+        if (event.pointerType === "touch") return;
+        show(link, event);
+      });
+      link.addEventListener("pointermove", (event) => {
+        if (event.pointerType === "touch") return;
+        move(link, event);
+      });
       link.addEventListener("pointerleave", hide);
     } else {
       link.addEventListener("mouseenter", (event) => show(link, event));
@@ -576,6 +614,19 @@ function isTypingTarget(target: EventTarget | null) {
   );
 }
 
+function isSameAppUrl(left: URL, right: URL) {
+  return left.origin === right.origin &&
+    normalizePath(left.pathname) === normalizePath(right.pathname) &&
+    left.search === right.search &&
+    left.hash === right.hash;
+}
+
+function isCurrentHomePathNavigation(url: URL) {
+  return url.origin === window.location.origin &&
+    normalizePath(url.pathname) === "/" &&
+    normalizePath(window.location.pathname) === "/";
+}
+
 async function getAppDocument(url: URL) {
   const key = url.href;
   const request = fetchedPages.get(key) ?? fetch(key, { headers: { "X-Requested-With": "fetch" } }).then((response) => {
@@ -604,6 +655,7 @@ async function navigateApp(url: URL, replace = false) {
 
     const swap = () => {
       const importedMain = document.importNode(nextMain, true);
+      prepareImportedProjectIndex(importedMain);
       currentMain.replaceWith(importedMain);
       if (nextTitle) document.title = nextTitle;
       if (nextDescription) {
@@ -651,6 +703,16 @@ function initHybridGalleryNavigation() {
     const url = new URL(link.href, window.location.href);
     if (url.origin !== window.location.origin) return;
     if (!isAppPath(window.location.pathname) || !isAppPath(url.pathname)) return;
+    if (isCurrentHomePathNavigation(url)) {
+      event.preventDefault();
+      document.dispatchEvent(new CustomEvent("xppel:close-menu"));
+      return;
+    }
+    if (isSameAppUrl(url, new URL(window.location.href))) {
+      event.preventDefault();
+      document.dispatchEvent(new CustomEvent("xppel:close-menu"));
+      return;
+    }
     event.preventDefault();
     navigateApp(url);
   });
@@ -715,7 +777,7 @@ function refreshLightboxItems() {
       event.preventDefault();
       lastLightboxTrigger = item;
       lastTriggerRect = item.getBoundingClientRect();
-      renderLightbox(index, true);
+      renderLightbox(index);
     });
   });
 }
@@ -740,23 +802,34 @@ function animateLightbox(open: boolean) {
         { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)" },
         { opacity: 0, transform: `translate3d(${dx}px, ${dy}px, 0) scale(${scale})` }
       ];
-  return lightboxImage.animate(keyframes, {
+  const animation = lightboxImage.animate(keyframes, {
     duration: open ? 420 : 360,
     easing: "cubic-bezier(0.16, 1, 0.3, 1)",
     fill: "both"
   });
+  if (open) {
+    animation.finished.then(() => animation.cancel()).catch(() => {});
+  }
+  return animation;
 }
 
 function decodeImage(src: string) {
+  const cached = decodedImages.get(src);
+  if (cached) return cached;
   const image = new Image();
   image.decoding = "async";
   image.src = src;
-  if (image.decode) return image.decode().then(() => image);
-  if (image.complete) return Promise.resolve(image);
-  return new Promise<HTMLImageElement>((resolve, reject) => {
+  const load = image.decode
+    ? image.decode().then(() => image)
+    : image.complete
+      ? Promise.resolve(image)
+      : new Promise<HTMLImageElement>((resolve, reject) => {
     image.onload = () => resolve(image);
     image.onerror = () => reject(new Error(`Could not load ${src}`));
   });
+  decodedImages.set(src, load);
+  load.catch(() => decodedImages.delete(src));
+  return load;
 }
 
 function waitForOpacityTransition(element: HTMLElement, fallbackMs = 340) {
@@ -778,13 +851,58 @@ function waitForOpacityTransition(element: HTMLElement, fallbackMs = 340) {
   });
 }
 
-function lightboxPlaceholderSource(item: HTMLAnchorElement) {
-  const image = item.querySelector("img");
-  if (image instanceof HTMLImageElement) return image.currentSrc || image.src || item.href;
-  return item.href;
+function setLightboxLoading(loading: boolean) {
+  const lightboxImage = document.querySelector("[data-lightbox-image]");
+  if (!(lightboxImage instanceof HTMLImageElement)) return;
+  lightboxImage.classList.toggle("is-loading", loading);
 }
 
-function renderLightbox(index: number, animateFromTrigger = false) {
+function getLightboxImageSize(item: HTMLAnchorElement, decoded?: HTMLImageElement) {
+  const preview = item.querySelector("img");
+  const width = decoded?.naturalWidth ||
+    (preview instanceof HTMLImageElement ? preview.naturalWidth || Number(preview.getAttribute("width")) : 0);
+  const height = decoded?.naturalHeight ||
+    (preview instanceof HTMLImageElement ? preview.naturalHeight || Number(preview.getAttribute("height")) : 0);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return undefined;
+  return { width, height };
+}
+
+function applyLightboxFrame(item: HTMLAnchorElement, decoded?: HTMLImageElement) {
+  const frame = document.querySelector(".lightbox-frame");
+  if (!(frame instanceof HTMLElement)) return;
+  const size = getLightboxImageSize(item, decoded);
+  if (!size) return;
+  frame.style.setProperty("--lightbox-aspect", `${size.width} / ${size.height}`);
+  frame.style.setProperty("--lightbox-ratio", String(size.width / size.height));
+}
+
+function preloadAdjacentLightboxImages(index: number) {
+  if (lightboxItems.length < 2) return;
+  const previous = lightboxItems[(index - 1 + lightboxItems.length) % lightboxItems.length];
+  const next = lightboxItems[(index + 1) % lightboxItems.length];
+  [previous, next].forEach((item) => {
+    if (item instanceof HTMLAnchorElement) decodeImage(item.href).catch(() => {});
+  });
+}
+
+async function swapLightboxImage(lightboxImage: HTMLImageElement, item: HTMLAnchorElement, token: number) {
+  const decoded = await decodeImage(item.href);
+  if (token !== lightboxLoadToken) return;
+  applyLightboxFrame(item, decoded);
+  if (motionQuery.matches) {
+    lightboxImage.src = decoded.src;
+    preloadAdjacentLightboxImages(activeLightboxIndex);
+    return;
+  }
+  lightboxImage.classList.add("is-loading");
+  await waitForOpacityTransition(lightboxImage, 180);
+  if (token !== lightboxLoadToken) return;
+  lightboxImage.src = decoded.src;
+  lightboxImage.classList.remove("is-loading");
+  preloadAdjacentLightboxImages(activeLightboxIndex);
+}
+
+async function renderLightbox(index: number) {
   const lightbox = document.querySelector("[data-lightbox]");
   const lightboxImage = document.querySelector("[data-lightbox-image]");
   const lightboxCaption = document.querySelector("[data-lightbox-caption]");
@@ -794,37 +912,36 @@ function renderLightbox(index: number, animateFromTrigger = false) {
   if (!(lightbox instanceof HTMLElement) || !(lightboxImage instanceof HTMLImageElement) || !(item instanceof HTMLAnchorElement)) return;
   const image = item.querySelector("img");
   const token = ++lightboxLoadToken;
-  const placeholderSrc = lightboxPlaceholderSource(item);
   const fullSrc = item.href;
   lightboxClosing = false;
   activeLightboxIndex = index;
   lightboxPrevious?.toggleAttribute("hidden", lightboxItems.length < 2);
   lightboxNext?.toggleAttribute("hidden", lightboxItems.length < 2);
   lightboxImage.getAnimations().forEach((animation) => animation.cancel());
-  lightboxImage.src = placeholderSrc;
   lightboxImage.alt = image?.getAttribute("alt") || item.getAttribute("aria-label") || "";
   if (lightboxCaption) lightboxCaption.textContent = lightboxImage.alt;
+  applyLightboxFrame(item);
   lightbox.classList.remove("is-closing");
   lightbox.hidden = false;
   lightbox.offsetHeight;
   lightbox.classList.add("is-active");
   document.documentElement.classList.add("lightbox-open");
   lightbox.focus({ preventScroll: true });
+  setLightboxLoading(true);
 
-  if (animateFromTrigger) {
-    window.requestAnimationFrame(() => animateLightbox(true));
-  }
-
-  if (fullSrc !== placeholderSrc) {
-    decodeImage(fullSrc)
-      .then(() => {
-        if (token !== lightboxLoadToken || lightbox.hidden) return;
-        lightboxImage.src = fullSrc;
-      })
-      .catch(() => {
-        if (token !== lightboxLoadToken || lightbox.hidden) return;
-        lightboxImage.src = placeholderSrc;
-      });
+  try {
+    const decoded = await decodeImage(fullSrc);
+    if (token !== lightboxLoadToken || lightbox.hidden) return;
+    applyLightboxFrame(item, decoded);
+    lightboxImage.src = decoded.src;
+    setLightboxLoading(false);
+    preloadAdjacentLightboxImages(index);
+  } catch {
+    if (token !== lightboxLoadToken || lightbox.hidden) return;
+    const fallbackSrc = image instanceof HTMLImageElement ? image.currentSrc || image.src : fullSrc;
+    applyLightboxFrame(item);
+    lightboxImage.src = fallbackSrc;
+    setLightboxLoading(false);
   }
 }
 
@@ -844,6 +961,7 @@ function closeLightbox() {
   if (!(lightbox instanceof HTMLElement) || lightbox.hidden || lightboxClosing) return;
   lightboxClosing = true;
   lightboxLoadToken += 1;
+  setLightboxLoading(false);
   const animation = animateLightbox(false);
   lightbox.classList.add("is-closing");
   lightbox.classList.remove("is-active");
@@ -865,7 +983,25 @@ function closeLightbox() {
 function moveLightbox(delta: number) {
   if (lightboxItems.length < 2) return;
   lastTriggerRect = null;
-  renderLightbox((activeLightboxIndex + delta + lightboxItems.length) % lightboxItems.length);
+  const lightbox = document.querySelector("[data-lightbox]");
+  const lightboxImage = document.querySelector("[data-lightbox-image]");
+  const item = lightboxItems[(activeLightboxIndex + delta + lightboxItems.length) % lightboxItems.length];
+  if (!(lightbox instanceof HTMLElement) || lightbox.hidden || !(lightboxImage instanceof HTMLImageElement) || !(item instanceof HTMLAnchorElement)) {
+    renderLightbox((activeLightboxIndex + delta + lightboxItems.length) % lightboxItems.length);
+    return;
+  }
+  const index = (activeLightboxIndex + delta + lightboxItems.length) % lightboxItems.length;
+  const image = item.querySelector("img");
+  const token = ++lightboxLoadToken;
+  activeLightboxIndex = index;
+  lightboxImage.alt = image?.getAttribute("alt") || item.getAttribute("aria-label") || "";
+  const lightboxCaption = document.querySelector("[data-lightbox-caption]");
+  if (lightboxCaption) lightboxCaption.textContent = lightboxImage.alt;
+  swapLightboxImage(lightboxImage, item, token).catch(() => {
+    if (token !== lightboxLoadToken || lightbox.hidden) return;
+    applyLightboxFrame(item);
+    lightboxImage.classList.remove("is-loading");
+  });
 }
 
 function initLightbox() {
@@ -950,45 +1086,211 @@ function initHomeSlider() {
   slider.dataset.homeSliderBound = "true";
 
   const track = slider.querySelector(".home-track");
-  const slides = Array.from(slider.querySelectorAll("[data-slide]"));
+  if (!(track instanceof HTMLElement)) return;
+
+  track.querySelectorAll("[data-slide-clone]").forEach((clone) => clone.remove());
+
+  const slides = Array.from(slider.querySelectorAll("[data-slide]")).filter((slide): slide is HTMLElement => slide instanceof HTMLElement);
+  if (slides.length === 0) return;
+
+  const canLoop = slides.length > 1;
   const previous = slider.querySelector("[data-slide-prev]");
   const next = slider.querySelector("[data-slide-next]");
-  const slideCount = Math.max(0, slides.length - 1);
   const autoplayDelay = 2800;
+  const animationDuration = 920;
+  const easing = "cubic-bezier(0.22, 1, 0.36, 1)";
   let autoplay = 0;
-  let current = 0;
-  let isSnapping = false;
-  let isTransitioning = false;
-  let pointerId = -1;
-  let startX = 0;
-  let startY = 0;
-  let dragX = 0;
-  let dragY = 0;
-  let swiping = false;
+  let activeIndex = 0;
+  let animating = false;
+  let animationTimer = 0;
+  let activeAnimations: Animation[] = [];
   let suppressClick = false;
+  let dragPointerId = -1;
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let dragDeltaX = 0;
+  let dragDirection = 0;
+  let dragTargetIndex = -1;
+  let didDrag = false;
+  let zoneFrame: HTMLElement | null = null;
+  let zoneImage: HTMLImageElement | null = null;
+  let zoneUpdateFrame = 0;
+  const zoneResizeObserver = "ResizeObserver" in window
+    ? new ResizeObserver(() => scheduleZoneBoundsUpdate())
+    : null;
 
-  function updateZoneBounds() {
-    const activeSlide = slides[current];
-    const frame = activeSlide instanceof HTMLElement ? activeSlide.querySelector(".home-slide-frame") : null;
-    if (!(frame instanceof HTMLElement)) return;
-    const sliderRect = slider.getBoundingClientRect();
-    const frameRect = frame.getBoundingClientRect();
-    const left = Math.max(0, Math.min(Math.max(0, sliderRect.width - frameRect.width), frameRect.left - sliderRect.left));
-    const top = Math.max(0, Math.min(Math.max(0, sliderRect.height - frameRect.height), frameRect.top - sliderRect.top));
-    slider.style.setProperty("--home-zone-left", `${left}px`);
-    slider.style.setProperty("--home-zone-top", `${top}px`);
-    slider.style.setProperty("--home-zone-width", `${Math.max(0, frameRect.width)}px`);
-    slider.style.setProperty("--home-zone-height", `${Math.max(0, frameRect.height)}px`);
+  function suppressNextClick() {
+    suppressClick = true;
+    window.setTimeout(() => {
+      suppressClick = false;
+    }, 450);
   }
 
-  function render(animate = true) {
-    if (!(track instanceof HTMLElement)) return;
-    const activeSlide = slides[current];
-    const x = activeSlide instanceof HTMLElement ? activeSlide.offsetLeft : 0;
-    track.style.transition = animate ? "" : "none";
-    track.style.transform = `translate3d(${-x}px, 0, 0)`;
-    slides.forEach((slide, index) => slide.toggleAttribute("aria-current", index === current || (current === slideCount && index === 0)));
-    requestAnimationFrame(updateZoneBounds);
+  function slideWidth() {
+    return Math.max(1, slider.getBoundingClientRect().width);
+  }
+
+  function wrapIndex(index: number) {
+    return (index + slides.length) % slides.length;
+  }
+
+  function updateCurrentAttributes(currentIndex = activeIndex) {
+    slides.forEach((slide, index) => slide.toggleAttribute("aria-current", index === currentIndex));
+  }
+
+  function offsetTransform(offset: number, unit: "percent" | "px") {
+    return unit === "percent"
+      ? `translate3d(${offset * 100}%, 0, 0)`
+      : `translate3d(${offset}px, 0, 0)`;
+  }
+
+  function setSlideOffset(slide: HTMLElement, offset: number, unit: "percent" | "px" = "percent") {
+    slide.style.transition = "none";
+    slide.style.transform = offsetTransform(offset, unit);
+  }
+
+  function showSlide(slide: HTMLElement, offset: number, unit: "percent" | "px" = "percent") {
+    slide.classList.add("is-transitioning");
+    setSlideOffset(slide, offset, unit);
+  }
+
+  function hideSlide(slide: HTMLElement) {
+    slide.classList.remove("is-current", "is-transitioning");
+    slide.style.transition = "none";
+    slide.style.transform = "translate3d(0, 0, 0)";
+  }
+
+  function clearAnimationTimer() {
+    window.clearTimeout(animationTimer);
+    animationTimer = 0;
+  }
+
+  function cancelSlideAnimations() {
+    activeAnimations.forEach((animation) => animation.cancel());
+    activeAnimations = [];
+  }
+
+  function settleAt(index: number) {
+    clearAnimationTimer();
+    cancelSlideAnimations();
+    animating = false;
+    dragPointerId = -1;
+    dragDirection = 0;
+    dragTargetIndex = -1;
+    dragDeltaX = 0;
+    activeIndex = wrapIndex(index);
+    slides.forEach((slide, slideIndex) => {
+      if (slideIndex === activeIndex) {
+        slide.classList.add("is-current");
+        slide.classList.remove("is-transitioning");
+        slide.style.transition = "none";
+        slide.style.transform = "translate3d(0, 0, 0)";
+      } else {
+        hideSlide(slide);
+      }
+    });
+    updateCurrentAttributes(activeIndex);
+    scheduleZoneBoundsUpdate();
+  }
+
+  function animateToSettled(
+    targetIndex: number,
+    current: HTMLElement,
+    incoming: HTMLElement,
+    currentOffset: number,
+    incomingOffset: number,
+    unit: "percent" | "px"
+  ) {
+    if (motionQuery.matches) {
+      settleAt(targetIndex);
+      startAutoplay();
+      return;
+    }
+
+    let finished = false;
+    cancelSlideAnimations();
+    animating = true;
+
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      settleAt(targetIndex);
+      startAutoplay();
+    };
+
+    const options: KeyframeAnimationOptions = {
+      duration: animationDuration,
+      easing,
+      fill: "forwards"
+    };
+    const currentAnimation = current.animate([
+      { transform: getComputedStyle(current).transform },
+      { transform: offsetTransform(currentOffset, unit) }
+    ], options);
+    const incomingAnimation = incoming.animate([
+      { transform: getComputedStyle(incoming).transform },
+      { transform: offsetTransform(incomingOffset, unit) }
+    ], options);
+    activeAnimations = [currentAnimation, incomingAnimation];
+
+    Promise.allSettled(activeAnimations.map((animation) => animation.finished)).then(finish);
+    clearAnimationTimer();
+    animationTimer = window.setTimeout(finish, animationDuration + 120);
+  }
+
+  function clamp(value: number, min: number, max: number) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function getZoneHitWidth(imageWidth: number) {
+    const isNarrow = window.matchMedia("(max-width: 760px)").matches;
+    const ratio = isNarrow ? 0.22 : 0.18;
+    const min = isNarrow ? 44 : 56;
+    const max = isNarrow ? 104 : 180;
+    const minimumCenter = Math.min(isNarrow ? 150 : 240, imageWidth * 0.5);
+    const maximumHit = Math.max(0, (imageWidth - minimumCenter) / 2);
+    return clamp(imageWidth * ratio, Math.min(min, maximumHit), Math.min(max, maximumHit));
+  }
+
+  function observeZoneSource(frame: HTMLElement, image: HTMLImageElement | null) {
+    if (!zoneResizeObserver) return;
+    if (zoneFrame !== frame) {
+      if (zoneFrame) zoneResizeObserver.unobserve(zoneFrame);
+      zoneFrame = frame;
+      zoneResizeObserver.observe(frame);
+    }
+    if (zoneImage !== image) {
+      if (zoneImage) zoneResizeObserver.unobserve(zoneImage);
+      zoneImage = image;
+      if (zoneImage) zoneResizeObserver.observe(zoneImage);
+    }
+  }
+
+  function updateZoneBounds() {
+    const activeSlide = slides[activeIndex] ?? slides[0];
+    const frame = activeSlide?.querySelector(".home-slide-link");
+    if (!(frame instanceof HTMLElement)) return;
+    const image = frame.querySelector("img");
+    const sliderRect = slider.getBoundingClientRect();
+    const imageRect = image instanceof HTMLImageElement ? image.getBoundingClientRect() : frame.getBoundingClientRect();
+    observeZoneSource(frame, image instanceof HTMLImageElement ? image : null);
+    const hasMeasuredImage = imageRect.width > 0 && imageRect.height > 0;
+    const left = Math.max(0, Math.min(Math.max(0, sliderRect.width - imageRect.width), imageRect.left - sliderRect.left));
+    const top = Math.max(0, Math.min(Math.max(0, sliderRect.height - imageRect.height), imageRect.top - sliderRect.top));
+    slider.style.setProperty("--home-zone-left", `${left}px`);
+    slider.style.setProperty("--home-zone-top", `${top}px`);
+    slider.style.setProperty("--home-zone-width", `${Math.max(0, imageRect.width)}px`);
+    slider.style.setProperty("--home-zone-height", `${Math.max(0, imageRect.height)}px`);
+    slider.style.setProperty("--home-zone-hit", `${getZoneHitWidth(Math.max(0, imageRect.width))}px`);
+    slider.classList.toggle("is-ready", hasMeasuredImage);
+  }
+
+  function scheduleZoneBoundsUpdate() {
+    if (zoneUpdateFrame) return;
+    zoneUpdateFrame = window.requestAnimationFrame(() => {
+      zoneUpdateFrame = 0;
+      updateZoneBounds();
+    });
   }
 
   function shouldPauseAutoplay() {
@@ -999,97 +1301,187 @@ function initHomeSlider() {
 
   function startAutoplay() {
     window.clearTimeout(autoplay);
-    if (!slideCount || motionQuery.matches) return;
+    if (!canLoop || motionQuery.matches) return;
     autoplay = window.setTimeout(() => {
-      if (!shouldPauseAutoplay()) move(1);
+      if (!shouldPauseAutoplay() && !animating && dragPointerId === -1) goNext();
       startAutoplay();
     }, autoplayDelay);
   }
 
-  function move(delta: number, manual = false) {
-    if (!slideCount || isSnapping || isTransitioning) return;
-    if (manual) startAutoplay();
-
-    if (delta < 0 && current === 0) {
-      current = slideCount;
-      render(false);
-      track?.clientHeight;
-      current = slideCount - 1;
-      isTransitioning = true;
-      render();
+  function moveTo(targetIndex: number, direction: 1 | -1) {
+    if (!canLoop) return;
+    if (animating || dragPointerId !== -1) return;
+    const nextIndex = wrapIndex(targetIndex);
+    if (nextIndex === activeIndex) return;
+    if (motionQuery.matches) {
+      settleAt(nextIndex);
       return;
     }
 
-    current = Math.min(current + delta, slideCount);
-    isTransitioning = true;
-    render();
+    window.clearTimeout(autoplay);
+    animating = true;
+    const current = slides[activeIndex];
+    const incoming = slides[nextIndex];
+    slides.forEach((slide) => {
+      if (slide !== current && slide !== incoming) hideSlide(slide);
+    });
+    showSlide(current, 0);
+    showSlide(incoming, direction);
+    track.getBoundingClientRect();
+    animateToSettled(nextIndex, current, incoming, -direction, 0, "percent");
   }
 
-  previous?.addEventListener("click", () => move(-1, true));
-  next?.addEventListener("click", () => move(1, true));
+  function goNext() {
+    moveTo(activeIndex + 1, 1);
+  }
+
+  function goPrevious() {
+    moveTo(activeIndex - 1, -1);
+  }
+
+  function prepareDragTarget(direction: 1 | -1, width: number) {
+    const targetIndex = wrapIndex(activeIndex + direction);
+    if (dragDirection === direction && dragTargetIndex === targetIndex) return;
+    dragDirection = direction;
+    dragTargetIndex = targetIndex;
+    slides.forEach((slide, index) => {
+      if (index !== activeIndex && index !== targetIndex) hideSlide(slide);
+    });
+    showSlide(slides[activeIndex], 0, "px");
+    showSlide(slides[targetIndex], direction * width, "px");
+  }
+
+  function finishDrag(complete: boolean) {
+    const direction = dragDirection as 1 | -1;
+    const targetIndex = dragTargetIndex;
+    const current = slides[activeIndex];
+    const incoming = slides[targetIndex];
+    if (!direction || targetIndex < 0 || !incoming) {
+      settleAt(activeIndex);
+      startAutoplay();
+      return;
+    }
+
+    const width = slideWidth();
+    animating = true;
+    animateToSettled(
+      complete ? targetIndex : activeIndex,
+      current,
+      incoming,
+      complete ? -direction * width : 0,
+      complete ? 0 : direction * width,
+      "px"
+    );
+  }
+
+  previous?.addEventListener("click", () => {
+    goPrevious();
+  });
+  next?.addEventListener("click", () => {
+    goNext();
+  });
   slider.addEventListener("pointerdown", (event) => {
-    if (event.button !== 0) return;
+    if (!canLoop || animating || event.pointerType === "mouse") return;
     const target = event.target;
     if (target instanceof Element && target.closest(".zone-button")) return;
-    pointerId = event.pointerId;
-    startX = event.clientX;
-    startY = event.clientY;
-    dragX = 0;
-    dragY = 0;
-    swiping = false;
-    slider.setPointerCapture(pointerId);
-  });
+    dragPointerId = event.pointerId;
+    dragStartX = event.clientX;
+    dragStartY = event.clientY;
+    dragDeltaX = 0;
+    dragDirection = 0;
+    dragTargetIndex = -1;
+    didDrag = false;
+    slider.setPointerCapture(event.pointerId);
+    window.clearTimeout(autoplay);
+  }, { passive: true });
   slider.addEventListener("pointermove", (event) => {
-    if (event.pointerId !== pointerId) return;
-    dragX = event.clientX - startX;
-    dragY = event.clientY - startY;
-    if (!swiping && Math.abs(dragX) > 12 && Math.abs(dragX) > Math.abs(dragY) * 1.25) {
-      swiping = true;
-    }
-    if (swiping) event.preventDefault();
-  });
+    if (event.pointerId !== dragPointerId) return;
+    const deltaX = event.clientX - dragStartX;
+    const deltaY = event.clientY - dragStartY;
+    if (!didDrag && Math.abs(deltaX) > 8 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) didDrag = true;
+    if (!didDrag) return;
+    dragDeltaX = deltaX;
+    const width = slideWidth();
+    const direction = deltaX < 0 ? 1 : -1;
+    prepareDragTarget(direction, width);
+    const current = slides[activeIndex];
+    const incoming = slides[dragTargetIndex];
+    const clampedDelta = Math.max(-width, Math.min(width, deltaX));
+    setSlideOffset(current, clampedDelta, "px");
+    setSlideOffset(incoming, clampedDelta + direction * width, "px");
+  }, { passive: true });
   slider.addEventListener("pointerup", (event) => {
-    if (event.pointerId !== pointerId) return;
-    const threshold = Math.min(120, Math.max(42, slider.clientWidth * 0.1));
-    if (swiping && Math.abs(dragX) > threshold) {
-      suppressClick = true;
-      move(dragX < 0 ? 1 : -1, true);
+    if (event.pointerId !== dragPointerId) return;
+    const threshold = Math.min(120, Math.max(44, slideWidth() * 0.12));
+    if (didDrag) suppressNextClick();
+    if (didDrag && Math.abs(dragDeltaX) > threshold) {
+      finishDrag(true);
+    } else {
+      finishDrag(false);
     }
-    pointerId = -1;
-    swiping = false;
-  });
+    dragPointerId = -1;
+  }, { passive: true });
   slider.addEventListener("pointercancel", () => {
-    pointerId = -1;
-    swiping = false;
+    if (dragPointerId === -1) return;
+    dragPointerId = -1;
+    finishDrag(false);
+  });
+  slider.addEventListener("dragstart", (event) => {
+    event.preventDefault();
+  });
+  slider.addEventListener("selectstart", (event) => {
+    event.preventDefault();
   });
   slider.addEventListener("click", (event) => {
-    if (!suppressClick) return;
+    if (suppressClick) {
+      event.preventDefault();
+      event.stopPropagation();
+      suppressClick = false;
+      return;
+    }
+    if (!(event instanceof MouseEvent) || !isPlainLeftClick(event)) return;
+    const target = event.target;
+    if (!(target instanceof Element) || target.closest(".zone-button")) return;
+    const link = target.closest(".home-slide-link[href]");
+    if (!(link instanceof HTMLAnchorElement)) return;
     event.preventDefault();
     event.stopPropagation();
-    suppressClick = false;
+    const url = new URL(link.href, window.location.href);
+    if (url.origin === window.location.origin && isAppPath(url.pathname)) {
+      navigateApp(url);
+    } else {
+      window.location.href = url.href;
+    }
   }, true);
-  track?.addEventListener("transitionend", (event) => {
-    if (event.target !== track || event.propertyName !== "transform") return;
-    isTransitioning = false;
-    if (current !== slideCount) return;
-    isSnapping = true;
-    current = 0;
-    render(false);
-    track?.clientHeight;
-    window.requestAnimationFrame(() => {
-      if (track instanceof HTMLElement) track.style.transition = "";
-      isSnapping = false;
-    });
-  });
   window.addEventListener("keydown", (event) => {
     if (!document.querySelector("[data-home-slider]")) return;
-    if (event.key === "ArrowLeft") move(-1, true);
-    if (event.key === "ArrowRight") move(1, true);
+    if (event.key === "ArrowLeft") {
+      goPrevious();
+    }
+    if (event.key === "ArrowRight") {
+      goNext();
+    }
   });
-  window.addEventListener("resize", () => render(false));
-  window.addEventListener("load", updateZoneBounds);
-  motionQuery.addEventListener("change", startAutoplay);
-  render();
+  slides.forEach((slide) => {
+    const image = slide.querySelector("img");
+    if (image instanceof HTMLImageElement) {
+      image.addEventListener("load", () => scheduleZoneBoundsUpdate());
+    }
+  });
+  if (zoneResizeObserver) zoneResizeObserver.observe(slider);
+  window.addEventListener("resize", () => {
+    settleAt(activeIndex);
+  });
+  window.addEventListener("orientationchange", () => {
+    window.setTimeout(() => settleAt(activeIndex), 120);
+  });
+  window.addEventListener("load", () => scheduleZoneBoundsUpdate());
+  motionQuery.addEventListener("change", () => {
+    settleAt(activeIndex);
+    startAutoplay();
+  });
+  slider.classList.add("is-enhanced");
+  settleAt(0);
   startAutoplay();
 }
 
@@ -1101,6 +1493,51 @@ function readProjectIndexStorage() {
     sessionStorage.removeItem(PROJECT_STATE_KEY);
     return {};
   }
+}
+
+function isProjectIndexView(value: unknown): value is ProjectIndexState["view"] {
+  return value === "grid" || value === "list";
+}
+
+function isProjectIndexSize(value: unknown): value is ProjectIndexState["size"] {
+  return PROJECT_INDEX_SIZES.includes(value as ProjectIndexState["size"]);
+}
+
+function defaultProjectIndexView() {
+  return window.matchMedia("(max-width: 760px)").matches ? "list" : "grid";
+}
+
+function readProjectIndexBootstrap() {
+  return (window as ProjectIndexWindow).__xppelProjectIndexState ?? {};
+}
+
+function getProjectIndexInitialShellState(root?: HTMLElement | null) {
+  const stored = readProjectIndexStorage();
+  const bootstrap = readProjectIndexBootstrap();
+  const rootView = isProjectIndexView(root?.getAttribute("data-view")) ? root?.getAttribute("data-view") as ProjectIndexState["view"] : undefined;
+  const rootSize = isProjectIndexSize(root?.getAttribute("data-size")) ? root?.getAttribute("data-size") as ProjectIndexState["size"] : undefined;
+  const bootstrapView = isProjectIndexView(bootstrap.view) ? bootstrap.view : undefined;
+  const bootstrapSize = isProjectIndexSize(bootstrap.size) ? bootstrap.size : undefined;
+  const storedView = isProjectIndexView(stored.view) ? stored.view : undefined;
+  const storedSize = isProjectIndexSize(stored.size) ? stored.size : undefined;
+
+  return {
+    view: rootView ?? (normalizePath(window.location.pathname) === PROJECT_INDEX_PATH ? bootstrapView : undefined) ?? storedView ?? defaultProjectIndexView(),
+    size: rootSize ?? (normalizePath(window.location.pathname) === PROJECT_INDEX_PATH ? bootstrapSize : undefined) ?? storedSize ?? "m"
+  };
+}
+
+function syncProjectIndexShell(root: HTMLElement, state = getProjectIndexInitialShellState(root)) {
+  root.setAttribute("data-view", state.view);
+  root.setAttribute("data-size", state.size);
+  root.querySelectorAll("[data-view-mode]").forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.getAttribute("data-view-mode") === state.view));
+  });
+}
+
+function prepareImportedProjectIndex(main: HTMLElement) {
+  const root = main.querySelector("[data-projects-index]");
+  if (root instanceof HTMLElement) syncProjectIndexShell(root, getProjectIndexInitialShellState(root));
 }
 
 function initProjectsIndex() {
@@ -1118,22 +1555,18 @@ function initProjectsIndex() {
   const empty = root.querySelector("[data-project-empty]");
   const viewButtons = Array.from(root.querySelectorAll("[data-view-mode]"));
   const sizeButtons = Array.from(root.querySelectorAll("[data-size-step]"));
-  const sizes = ["s", "m", "l"] as const;
-
-  function defaultView() {
-    return window.matchMedia("(max-width: 760px)").matches ? "list" : "grid";
-  }
 
   function readParams(): ProjectIndexState {
     const params = new URLSearchParams(window.location.search);
     const stored = readProjectIndexStorage();
+    const shellState = getProjectIndexInitialShellState(root);
     const selectedTags = new Set(params.getAll("tag"));
     const hasUrlFilters = params.has("q") || selectedTags.size > 0;
     const storedTags = Array.isArray(stored.selectedTags) ? stored.selectedTags : [];
     return {
       q: params.get("q") ?? (!hasUrlFilters ? String(stored.q ?? "") : ""),
-      view: stored.view === "list" || stored.view === "grid" ? stored.view : defaultView(),
-      size: sizes.includes(stored.size) ? stored.size : "m",
+      view: shellState.view,
+      size: shellState.size,
       selectedTags: selectedTags.size ? selectedTags : new Set(!hasUrlFilters ? storedTags : [])
     };
   }
@@ -1156,7 +1589,7 @@ function initProjectsIndex() {
     return {
       q: searchInput instanceof HTMLInputElement ? searchInput.value.trim().toLowerCase() : "",
       view: root.getAttribute("data-view") === "list" ? "list" : "grid",
-      size: sizes.includes(root.getAttribute("data-size") as ProjectIndexState["size"]) ? root.getAttribute("data-size") as ProjectIndexState["size"] : "m",
+      size: isProjectIndexSize(root.getAttribute("data-size")) ? root.getAttribute("data-size") as ProjectIndexState["size"] : "m",
       selectedTags: new Set(filters.filter((filter) => filter instanceof HTMLInputElement && filter.checked).map((filter) => filter.value))
     };
   }
@@ -1166,6 +1599,7 @@ function initProjectsIndex() {
     root.setAttribute("data-size", state.size);
     document.documentElement.dataset.projectIndexView = state.view;
     document.documentElement.dataset.projectIndexSize = state.size;
+    (window as ProjectIndexWindow).__xppelProjectIndexState = { view: state.view, size: state.size };
     if (searchInput instanceof HTMLInputElement) searchInput.value = state.q;
     filters.forEach((filter) => {
       if (filter instanceof HTMLInputElement) filter.checked = state.selectedTags.has(filter.value);
@@ -1213,8 +1647,8 @@ function initProjectsIndex() {
   }));
   sizeButtons.forEach((button) => button.addEventListener("click", () => {
     const state = getState();
-    const nextIndex = Math.max(0, Math.min(sizes.length - 1, sizes.indexOf(state.size) + Number(button.getAttribute("data-size-step"))));
-    applyState({ ...state, size: sizes[nextIndex] });
+    const nextIndex = Math.max(0, Math.min(PROJECT_INDEX_SIZES.length - 1, PROJECT_INDEX_SIZES.indexOf(state.size) + Number(button.getAttribute("data-size-step"))));
+    applyState({ ...state, size: PROJECT_INDEX_SIZES[nextIndex] });
   }));
 
   window.addEventListener("keydown", (event) => {

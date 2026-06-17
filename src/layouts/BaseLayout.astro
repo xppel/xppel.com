@@ -50,11 +50,12 @@ const footerPattern = footerCounts.map((count, index) => ({
           ? state.view
           : window.matchMedia("(max-width: 760px)").matches ? "list" : "grid";
         const size = sizes.has(state.size) ? state.size : "m";
+        window.__xppelProjectIndexState = { view, size };
         document.documentElement.dataset.projectIndexView = view;
         document.documentElement.dataset.projectIndexSize = size;
       })();
     </script>
-    <link rel="icon" href="/favicon.svg?v=20260612" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.svg?v=20260617" type="image/svg+xml" />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />

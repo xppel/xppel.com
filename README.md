@@ -9,10 +9,10 @@ The site is built with [Astro](https://astro.build/) and published at [xppel.com
 - App-style navigation that swaps site content without reloading the full page when browsing internal routes.
 - Project index with search, filters, responsive grid/list views, stable mobile zoom levels, and year-based navigation.
 - Project pages with optimized images and support for image, GIF, video, and YouTube media.
-- Homepage slideshow of selected work with keyboard, click-zone, and touch-swipe navigation.
+- Homepage slideshow of selected work with stable first paint, proportional image sizing, keyboard, click-zone, and touch-swipe navigation.
 - Photo grid with optimized Astro images.
 - Custom audio players for music.
-- Desktop project hover previews, a smooth shared lightbox, and a lightweight procedural logo click effect.
+- Desktop project hover previews, a smooth shared lightbox with stable fullscreen image sizing, and a lightweight procedural logo click effect.
 - GitHub Pages deployment through GitHub Actions.
 
 ## Tech Stack
@@ -67,7 +67,7 @@ Photos live in `src/content/photos/<photo>/index.md`.
 
 Music tracks live in `src/content/music/<track>/index.md`.
 
-Images that are rendered on the site should generally live beside their content entry in `src/content/` so Astro can optimize and validate them. Files that need stable public URLs, such as PDFs or favicons, belong in `public/`.
+Images that are rendered on the site should generally live beside their content entry in `src/content/` so Astro can optimize and validate them. Files that need stable public URLs, such as PDFs or favicons, belong in `public/`. When replacing `public/favicon.svg`, bump the favicon query string in `src/layouts/BaseLayout.astro` so browsers fetch the new file.
 
 ## Deployment
 

@@ -38,6 +38,16 @@ const jsonLd = {
 <BaseLayout title="Projects" activeSlug="projects" description="Searchable project index for Andrew Appel's design, engineering, and creative technology work.">
   <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   <section class="projects-index" data-projects-index data-view="grid" data-size="m">
+    <script is:inline>
+      (() => {
+        const script = document.currentScript;
+        const root = script?.closest("[data-projects-index]");
+        const state = window.__xppelProjectIndexState;
+        if (!root || !state) return;
+        if (state.view === "grid" || state.view === "list") root.setAttribute("data-view", state.view);
+        if (state.size === "s" || state.size === "m" || state.size === "l") root.setAttribute("data-size", state.size);
+      })();
+    </script>
     <header class="projects-toolbar">
       <button class="projects-clear-filters" type="button" aria-label="Clear filters" data-clear-filters hidden>
         <Icon name="close" title="Clear filters" />
@@ -60,6 +70,17 @@ const jsonLd = {
         <button type="button" aria-label="Larger cards" data-size-step="1">+</button>
       </div>
     </header>
+    <script is:inline>
+      (() => {
+        const script = document.currentScript;
+        const root = script?.closest("[data-projects-index]");
+        const state = window.__xppelProjectIndexState;
+        if (!root || !state || (state.view !== "grid" && state.view !== "list")) return;
+        root.querySelectorAll("[data-view-mode]").forEach((button) => {
+          button.setAttribute("aria-pressed", String(button.getAttribute("data-view-mode") === state.view));
+        });
+      })();
+    </script>
 
     <div class="projects-filter-panel" id="project-filters" hidden data-filter-panel>
       {Object.entries(taxonomy).map(([key, options]) => (

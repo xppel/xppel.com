@@ -33,6 +33,8 @@ info:
       href: "https://madeinbrunel.com/project/2106554/"
       external: true
     - text: "Exhibited at New Designers, July 9-12 2025."
+      href: "https://www.linkedin.com/posts/xppel_grateful-to-have-been-selected-to-exhibit-ugcPost-7350464387813412864-NUHJ/"
+      external: true
 portfolioLink: true
 ---
 

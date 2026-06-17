@@ -6,27 +6,32 @@ import { site } from "../data/site";
 import { getHomeProjects, getProjectHref, getProjects } from "../data/projects";
 
 const projects = getHomeProjects(await getProjects());
-const slides = projects.length ? [...projects, projects[0]] : [];
 ---
 
 <BaseLayout title={site.title} activeSlug="home">
   <section class="home-stage" aria-label="Selected work">
-    <div class="home-slider" data-home-slider>
+    <div class="home-slider is-enhanced" data-home-slider>
       <div class="home-track">
-        {slides.map((project, index) => (
-          <a class="home-slide" href={getProjectHref(project)} aria-label={`View ${project.data.title}`} data-slide={index} data-clone={index === projects.length ? "true" : "false"}>
-            <span class="home-slide-frame">
+        {projects.map((project, index) => (
+          <div class:list={["home-slide", { "is-current": index === 0 }]} data-slide={index} aria-current={index === 0 ? "true" : undefined}>
+            <a
+              class="home-slide-link"
+              href={getProjectHref(project)}
+              aria-label={`View ${project.data.title}`}
+              style={`--home-slide-aspect: ${project.data.thumbnail.width} / ${project.data.thumbnail.height}; --home-slide-ratio: ${project.data.thumbnail.width / project.data.thumbnail.height};`}
+            >
               <Image
                 src={project.data.thumbnail}
                 alt=""
                 widths={[640, 960, 1280, 1600]}
-                sizes="(max-width: 760px) 100vw, min(100vw - 31rem, 115rem)"
-                loading={index === 0 || index === projects.length ? "eager" : "lazy"}
+                sizes="(max-width: 760px) 100vw, min(100vw - 27rem, 120rem)"
+                loading="eager"
                 decoding="async"
+                draggable="false"
               />
-            </span>
+            </a>
             <span class="home-slide-label">{project.data.title}</span>
-          </a>
+          </div>
         ))}
       </div>
       <button class="zone-button zone-prev" type="button" aria-label="Previous project" data-slide-prev>

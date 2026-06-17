@@ -68,7 +68,7 @@ Fields:
 - `image`
 - `alt` optional, but recommended
 
-Photos are columnized by `src/data/photos.ts` and rendered through Astro image optimization.
+Photos are columnized by `src/data/photos.ts` and rendered through Astro image optimization. Photo thumbnails keep their natural page layout, while fullscreen viewing is handled by the shared lightbox.
 
 ### Music
 
@@ -109,6 +109,8 @@ Use `public/` for files that should not be transformed, such as:
 - static files that need a stable public path
 - committed social preview images
 
+When replacing `public/favicon.svg`, also bump the cache-busting query string in `src/layouts/BaseLayout.astro` and run `npm run build` so `dist/favicon.svg` matches the public source.
+
 ## Homepage Slideshow
 
 The homepage slideshow lives in `src/pages/index.astro`, with layout styles in `src/styles/global.css`.
@@ -117,24 +119,25 @@ Implementation notes:
 
 - The slideshow list is built from projects where `home.show` is true.
 - Slides are ordered by `projectId`, highest first.
-- A cloned first slide is appended to support forward looping.
-- Each slide wraps the optimized image in `.home-slide-frame`; the frame owns rounded corners and clipping.
-- JavaScript measures the `.home-slider` width and moves the track with pixel-based `translate3d(...)`.
-- The pixel-based transform avoids percentage rounding drift and keeps slide endpoints exact.
-- The transition is defined on `.home-track`.
-- Previous/next zones are calculated from the visible `.home-slide-frame`, not the larger slideshow container.
+- The first slide is rendered as the current slide in Astro so first paint matches the enhanced layout.
+- Each `.home-slide-link` receives image-specific aspect-ratio CSS variables from Astro image metadata.
+- CSS sizes the slide link from the available stage height with `--home-slide-scale`, currently `0.94`, while capping at viewport width on small screens.
+- JavaScript only marks the slider `is-ready` after measuring a non-zero visible image/frame rect.
+- Previous/next zones are calculated from the visible `.home-slide-link` image bounds, not the larger slideshow container.
+- Empty space around the slideshow image is intentionally not a link target and keeps the normal cursor.
 - Arrow keys also move the slideshow.
 - Horizontal pointer swipes move slides on touch devices while preserving normal vertical page scrolling.
 - Autoplay runs at 2800ms and does not slow down on hover.
 
 When changing the slideshow, verify:
 
-- The image remains centered and contained in `.home-slide-frame`.
+- Direct homepage loads show one current slide immediately, without a partial multi-slide arrangement.
+- The image remains centered, contained, proportionally sized, and rounded.
 - Rounded corners are visible.
-- The transform endpoint equals `-(currentSlide * sliderWidth)`.
-- The clone reset is not visible at the end of the loop.
+- Empty space above or beside the image is not clickable and does not show a pointer cursor.
+- Previous/next hit zones stay aligned to the measured image bounds.
 - Mobile still uses a single-column header and a 50vh slideshow area.
-- Click and scroll interaction zones match the visible image frame.
+- Mobile slideshow images stay within the viewport without horizontal overflow.
 - Swipe gestures do not trigger accidental link clicks unless the horizontal drag threshold is crossed.
 
 ## Floating Logo
@@ -203,6 +206,7 @@ Implementation notes:
 
 - Opening starts immediately from the clicked thumbnail/current image rect.
 - The clicked thumbnail is used as the first visible placeholder while the full image decodes in the background.
+- The lightbox frame gets image-specific aspect-ratio CSS variables before the full image swaps in, so fullscreen photos do not grow or snap after loading.
 - When the full image is ready, it swaps into the same frame.
 - Closing animates back to the triggering image rect and fades the backdrop before hiding the lightbox.
 - Escape closes without restoring a visible blue focus ring.
@@ -248,15 +252,17 @@ Browser-check:
 Specific visual checks:
 
 - Floating logo fades in after it is positioned.
-- Homepage slideshow images are centered, contained, and rounded.
-- Slideshow motion lands exactly on slide boundaries.
+- Homepage slideshow images are centered, contained, rounded, and proportionally sized.
+- Direct homepage loads do not snap from a partial arrangement.
 - Homepage slideshow speed does not change on hover.
+- Empty homepage slideshow space is not clickable.
 - Homepage slideshow and lightbox respond to horizontal swipes on touch devices.
 - Project cards do not crop thumbnails unexpectedly.
 - Project index direct load does not flicker between view or size states.
 - Mobile grid sizes render as S = 4, M = 3, and L = 2 columns.
 - Mobile list size S hides summaries, while M and L show adaptive summaries.
 - Photo grid images load with correct aspect ratios.
+- Photos opened in the fullscreen lightbox keep a stable size while loading and moving between images.
 - Desktop nav previews are consistently cropped 3:2 with no black bars.
 - Desktop and mobile nav labels do not shift when active text gets heavier.
 - Lightbox Escape followed by Space/Tab does not show a blue focus ring.

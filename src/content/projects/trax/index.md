@@ -36,4 +36,4 @@ Trax is a concept for discreet, non-invasive glucose monitoring and health track
 
 By passively tracking biomarkers and insulin response during sedentary moments, especially after meals, the insole encourages light activity through subtle prompts to help users naturally regulate their blood sugar levels.
 
-The project prioritized dignity, routine, and future-ready health insights, aiming to make preventative care feel discreet rather than clinical or invasive.
+The project prioritized dignity, routine, and future-ready health insights, aiming to stop preventative care from feeling clinical and invasive.

@@ -5,7 +5,7 @@ export const site = {
   name: "Andrew Appel",
   email: "andrew@xppel.com",
   description: "Portfolio of Andrew Appel, a multimedia designer, engineer, and artist.",
-  updated: "June 15th, 2026",
+  updated: "June 17th, 2026",
   url: "https://xppel.com",
   previewImage: "/assets/social/home-preview.png",
   previewImageAlt: "A. Appel portfolio homepage preview",
