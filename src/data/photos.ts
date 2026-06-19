@@ -11,7 +11,7 @@ const photoOrder = [
   "nyc-2",
   "nice-1",
   "brunel-1",
-  "brunel-2",
+  "guatemala-1",
   "genoa-1",
   "nyc-4",
   "california-3",
@@ -22,7 +22,7 @@ const photoOrder = [
 
 const photoColumns = [
   ["nyc-3", "bnw-california-9", "nice-1", "california-3", "bnw-california-1"],
-  ["brunel-2", "genoa-2", "nyc-2", "brunel-2", "nyc-4"],
+  ["brunel-2", "genoa-2", "nyc-2", "guatemala-1", "nyc-4"],
   ["california-1", "brunel-1", "genoa-1", "bnw-california-7", "nyc-1"]
 ];
 

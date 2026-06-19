@@ -1583,6 +1583,11 @@ html[data-project-index-view="list"] .projects-index .project-card-tags a:nth-ch
   border-radius: var(--radius);
 }
 
+.photos-page[data-photo-reveal="pending"] .photo-link img {
+  opacity: 0;
+  transform: translateY(0.7rem);
+}
+
 .photo-link img.photo-reveal-pending {
   opacity: 0;
   transform: translateY(0.7rem);

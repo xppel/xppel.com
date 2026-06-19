@@ -714,7 +714,10 @@ async function navigateApp(url: URL, replace = false) {
 }
 
 function initPhotoReveals() {
-  const images = Array.from(document.querySelectorAll("[data-photo-reveal] img"));
+  const photoPage = document.querySelector<HTMLElement>(".photos-page[data-photo-reveal=\"pending\"]");
+  if (!photoPage) return;
+
+  const images = Array.from(photoPage.querySelectorAll("[data-photo-reveal] img"));
   if (!images.length) return;
 
   function queueReveal(image: HTMLImageElement) {
@@ -729,16 +732,23 @@ function initPhotoReveals() {
     }, delay);
   }
 
-  images.forEach((image) => {
-    if (!(image instanceof HTMLImageElement) || image.dataset.photoRevealBound === "true") return;
+  if (motionQuery.matches) {
+    photoPage.dataset.photoReveal = "complete";
+    return;
+  }
+
+  const revealableImages = images.filter((image): image is HTMLImageElement => {
+    if (!(image instanceof HTMLImageElement) || image.dataset.photoRevealBound === "true") return false;
     image.dataset.photoRevealBound = "true";
-
-    if (motionQuery.matches) {
-      image.classList.add("is-photo-revealed");
-      return;
-    }
-
     image.classList.add("photo-reveal-pending");
+    return true;
+  });
+
+  // All images receive the pending state before the parser-time guard is lifted,
+  // so the first reveal does not flash visible between states.
+  photoPage.dataset.photoReveal = "active";
+
+  revealableImages.forEach((image) => {
     const revealWhenDecoded = async () => {
       try {
         await image.decode();

@@ -72,7 +72,7 @@ Fields:
 - `image`
 - `alt` optional, but recommended
 
-Photos are columnized by `src/data/photos.ts` and rendered through Astro image optimization. Photo thumbnails keep their natural page layout, enter through a short decode-aware staggered fade when motion is allowed, and remain immediately visible without JavaScript or when reduced motion is requested. Fullscreen viewing is handled by the shared lightbox.
+Photos are columnized by `src/data/photos.ts` and rendered through Astro image optimization. On the first Photos visit per browser tab, thumbnails start hidden before they are parsed and enter through a short decode-aware staggered fade when motion is allowed. Later app navigations and reloads in that tab remain visible without replaying the reveal; reduced-motion users also see them immediately. Fullscreen viewing is handled by the shared lightbox.
 
 ### Music
 

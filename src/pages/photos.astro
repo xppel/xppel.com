@@ -9,6 +9,21 @@ let lightboxIndex = 0;
 
 <BaseLayout title="Photos" activeSlug="photos" description="Film photography by Andrew Appel.">
   <section class="photos-page">
+    <script is:inline>
+      (() => {
+        const page = document.currentScript?.closest(".photos-page");
+        if (!page || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+        try {
+          if (sessionStorage.getItem("xppel-photos-revealed") === "true") return;
+          sessionStorage.setItem("xppel-photos-revealed", "true");
+        } catch {
+          // If session storage is unavailable, preserve the first-load reveal.
+        }
+
+        page.dataset.photoReveal = "pending";
+      })();
+    </script>
     <div class="photo-grid">
       {photoColumns.map((column) => (
         <div class="photo-column">
