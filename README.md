@@ -7,7 +7,7 @@ The site is built with [Astro](https://astro.build/) and published at [xppel.com
 ## Highlights
 
 - App-style navigation that swaps site content without reloading the full page when browsing internal routes.
-- Project index with search, filters, responsive grid/list views, stable mobile zoom levels, and year-based navigation.
+- Project index with search, filters, responsive grid/list views, stable filtered-card sizing, mobile thumbnail framing, and year-based navigation.
 - Project pages with optimized images and support for image, GIF, video, and YouTube media.
 - Procedural canopy homepage artwork with seeded SVG generation, responsive centered cropping, dithered monochrome depth, and a one-shot masked reveal.
 - Photo grid with optimized Astro images and staggered load reveals.

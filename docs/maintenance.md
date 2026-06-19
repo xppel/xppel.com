@@ -199,10 +199,12 @@ Implementation notes:
 - Session storage is the persistence boundary for view/size/search/filter state; do not switch to cross-session storage unless that behavior is explicitly requested.
 - Mobile grid sizes are fixed as `S = 4`, `M = 3`, and `L = 2` columns.
 - Mobile list view uses larger images than desktop list view.
+- Mobile list thumbnail frames retain the active size's inset padding and rounded corners; do not reset the frame at the mobile breakpoint.
 - Mobile list size `S` hides summary text.
 - Mobile list sizes `M` and `L` let summaries fill remaining text-column height, so larger frames naturally show more text.
 - Tags are kept to one compact visual line on mobile.
 - Filter-option labels must wrap within their grid cell; retain the zero-overflow behavior at desktop and mobile widths.
+- Use `auto-fill` for the desktop card grid so one or two filtered results keep their selected card width instead of expanding into unused tracks.
 
 When changing project index controls, verify there is no visible size/view flicker on direct `/projects/` loads or when navigating back to `/projects/` through app-style navigation. In particular, switching to list mode, leaving the page, and returning during the same session should stay in list mode immediately and after hydration settles.
 
