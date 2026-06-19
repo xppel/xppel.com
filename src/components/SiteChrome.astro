@@ -48,7 +48,10 @@ const previewImages = new Map(
   </div>
 
   <nav class="primary-projects-link" aria-label="Projects index">
-    <a class:list={["nav-stable-link", isProjectsIndex && "active"]} href="/projects/" data-nav-label="Projects"><Icon name="arrow" /> <span class="nav-label">Projects</span></a>
+    <div class="nav-link-row">
+      <Icon name="arrow" />
+      <a class:list={["nav-label-link", isProjectsIndex && "active"]} href="/projects/" data-nav-label="Projects"><span class="nav-label">Projects</span></a>
+    </div>
   </nav>
 
   <div class="work-list" aria-label="Project navigation">
@@ -75,10 +78,19 @@ const previewImages = new Map(
   </div>
 
   <nav class="secondary-links" aria-label="Secondary navigation">
-    <a class:list={["nav-stable-link", activeSlug === "music" && "active"]} href="/music/" data-nav-label="Music"><Icon name="arrow" /> <span class="nav-label">Music</span></a>
-    <a class:list={["nav-stable-link", activeSlug === "photos" && "active"]} href="/photos/" data-nav-label="Photos"><Icon name="arrow" /> <span class="nav-label">Photos</span></a>
+    <div class="nav-link-row">
+      <Icon name="arrow" />
+      <a class:list={["nav-label-link", activeSlug === "music" && "active"]} href="/music/" data-nav-label="Music"><span class="nav-label">Music</span></a>
+    </div>
+    <div class="nav-link-row">
+      <Icon name="arrow" />
+      <a class:list={["nav-label-link", activeSlug === "photos" && "active"]} href="/photos/" data-nav-label="Photos"><span class="nav-label">Photos</span></a>
+    </div>
     <span class="nav-gap" aria-hidden="true"></span>
-    <a class:list={["nav-stable-link", activeSlug === "about" && "active"]} href="/about/" data-nav-label="About"><Icon name="arrow" /> <span class="nav-label">About</span></a>
+    <div class="nav-link-row">
+      <Icon name="arrow" />
+      <a class:list={["nav-label-link", activeSlug === "about" && "active"]} href="/about/" data-nav-label="About"><span class="nav-label">About</span></a>
+    </div>
   </nav>
   <div class="nav-preview" aria-hidden="true" data-nav-preview>
     <span class="nav-preview-line" aria-hidden="true"></span>
@@ -98,8 +110,14 @@ const previewImages = new Map(
     </button>
   </div>
   <nav class="mobile-quick-links" aria-label="Quick links">
-    <a class:list={["nav-stable-link", isProjectsIndex && "active"]} href="/projects/" data-nav-label="Projects"><Icon name="arrow" /> <span class="nav-label">Projects</span></a>
-    <a class:list={["nav-stable-link", activeSlug === "about" && "active"]} href="/about/" data-nav-label="About"><Icon name="arrow" /> <span class="nav-label">About</span></a>
+    <div class="nav-link-row">
+      <Icon name="arrow" />
+      <a class:list={["nav-label-link", isProjectsIndex && "active"]} href="/projects/" data-nav-label="Projects"><span class="nav-label">Projects</span></a>
+    </div>
+    <div class="nav-link-row">
+      <Icon name="arrow" />
+      <a class:list={["nav-label-link", activeSlug === "about" && "active"]} href="/about/" data-nav-label="About"><span class="nav-label">About</span></a>
+    </div>
   </nav>
 </header>
 
@@ -110,7 +128,10 @@ const previewImages = new Map(
     </button>
     <a class="mobile-menu-brand" href="/" data-home-logo>A. Appel <Icon name="broadcast" /></a>
     <nav class="primary-projects-link" aria-label="Mobile projects index">
-      <a class:list={["nav-stable-link", isProjectsIndex && "active"]} href="/projects/" data-nav-label="Projects"><Icon name="arrow" /> <span class="nav-label">Projects</span></a>
+      <div class="nav-link-row">
+        <Icon name="arrow" />
+        <a class:list={["nav-label-link", isProjectsIndex && "active"]} href="/projects/" data-nav-label="Projects"><span class="nav-label">Projects</span></a>
+      </div>
     </nav>
     <div class="work-list" aria-label="Mobile project navigation">
       {projectGroups.map((group) => (
@@ -129,10 +150,19 @@ const previewImages = new Map(
       ))}
     </div>
     <nav class="secondary-links" aria-label="Mobile secondary navigation">
-      <a class:list={["nav-stable-link", activeSlug === "music" && "active"]} href="/music/" data-nav-label="Music"><Icon name="arrow" /> <span class="nav-label">Music</span></a>
-      <a class:list={["nav-stable-link", activeSlug === "photos" && "active"]} href="/photos/" data-nav-label="Photos"><Icon name="arrow" /> <span class="nav-label">Photos</span></a>
+      <div class="nav-link-row">
+        <Icon name="arrow" />
+        <a class:list={["nav-label-link", activeSlug === "music" && "active"]} href="/music/" data-nav-label="Music"><span class="nav-label">Music</span></a>
+      </div>
+      <div class="nav-link-row">
+        <Icon name="arrow" />
+        <a class:list={["nav-label-link", activeSlug === "photos" && "active"]} href="/photos/" data-nav-label="Photos"><span class="nav-label">Photos</span></a>
+      </div>
       <span class="nav-gap" aria-hidden="true"></span>
-      <a class:list={["nav-stable-link", activeSlug === "about" && "active"]} href="/about/" data-nav-label="About"><Icon name="arrow" /> <span class="nav-label">About</span></a>
+      <div class="nav-link-row">
+        <Icon name="arrow" />
+        <a class:list={["nav-label-link", activeSlug === "about" && "active"]} href="/about/" data-nav-label="About"><span class="nav-label">About</span></a>
+      </div>
     </nav>
   </div>
 </div>

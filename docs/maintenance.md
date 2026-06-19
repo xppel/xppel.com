@@ -72,7 +72,7 @@ Fields:
 - `image`
 - `alt` optional, but recommended
 
-Photos are columnized by `src/data/photos.ts` and rendered through Astro image optimization. Photo thumbnails keep their natural page layout, while fullscreen viewing is handled by the shared lightbox.
+Photos are columnized by `src/data/photos.ts` and rendered through Astro image optimization. Photo thumbnails keep their natural page layout, enter through a short decode-aware staggered fade when motion is allowed, and remain immediately visible without JavaScript or when reduced motion is requested. Fullscreen viewing is handled by the shared lightbox.
 
 ### Music
 
@@ -111,6 +111,8 @@ Use `public/` for files that should not be transformed, such as:
 - favicons
 - static files that need a stable public path
 - committed social preview images
+
+`public/assets/social/home-preview.png` is the 1200x630 PNG used by the Open Graph and Twitter metadata. Keep it as a desktop homepage capture with navigation, framed canopy, and footer. Create replacements from a fixed capture seed (currently `social-preview-20260619`) without changing the live homepage's `seed="auto"` behavior.
 
 When replacing `public/favicon.svg`, also bump the cache-busting query string in `src/layouts/BaseLayout.astro` and run `npm run build` so `dist/favicon.svg` matches the public source.
 
@@ -177,7 +179,7 @@ Site navigation is enhanced in `src/scripts/site.ts`:
 - External links, downloads, file links, modifier-clicks, hash-only jumps, and failed fetches fall back to normal browser navigation.
 - `xppel:page-load` fires after the initial load and after enhanced swaps so page initializers can re-bind idempotently.
 
-Nav labels use `.nav-stable-link` plus `data-nav-label` to reserve the bold active-label width and keep icons in a fixed first column. Apply that structure to desktop links, mobile quick links, and mobile menu links so arrows do not move when the active page becomes heavier.
+Each nav entry uses `.nav-link-row`: its arrow is a fixed, non-interactive first column and its `.nav-label-link` reserves the bold active-label width through `data-nav-label`. Apply that structure to desktop links, mobile quick links, and mobile menu links so arrows do not move when the active page becomes heavier. `navigateApp()` marks the destination active before its fetch completes. Keep the 1.2rem gap between the Projects row and its year-grouped project list.
 
 The global nav intentionally omits the Email link. Keep email contact available on the About page contact links instead.
 
@@ -200,6 +202,7 @@ Implementation notes:
 - Mobile list size `S` hides summary text.
 - Mobile list sizes `M` and `L` let summaries fill remaining text-column height, so larger frames naturally show more text.
 - Tags are kept to one compact visual line on mobile.
+- Filter-option labels must wrap within their grid cell; retain the zero-overflow behavior at desktop and mobile widths.
 
 When changing project index controls, verify there is no visible size/view flicker on direct `/projects/` loads or when navigating back to `/projects/` through app-style navigation. In particular, switching to list mode, leaving the page, and returning during the same session should stay in list mode immediately and after hydration settles.
 
@@ -225,7 +228,7 @@ Implementation notes:
 
 The footer is in `src/layouts/BaseLayout.astro`.
 
-The displayed update date comes from `site.updated` in `src/data/site.ts`. Update this when shipping visible content or design changes.
+The displayed update date comes from `site.updated` in `src/data/site.ts` and is formatted from the local date when the static site builds. Do not manually edit a date string; run the production build on the day of release.
 
 ## Styling Conventions
 
@@ -270,10 +273,11 @@ Specific visual checks:
 - Project index direct load does not flicker between view or size states.
 - Mobile grid sizes render as S = 4, M = 3, and L = 2 columns.
 - Mobile list size S hides summaries, while M and L show adaptive summaries.
-- Photo grid images load with correct aspect ratios.
+- Photo grid images load with correct aspect ratios and fade in sequentially after decoding; reduced-motion users see them immediately.
 - Photos opened in the fullscreen lightbox keep a stable size while loading and moving between images.
 - Desktop nav previews are consistently cropped 3:2 with no black bars.
 - Desktop and mobile nav labels do not shift when active text gets heavier.
+- Project filter labels wrap without overlapping or horizontal overflow.
 - Lightbox Escape followed by Space/Tab does not show a blue focus ring.
 - Footer date is accurate.
 - No console errors or framework overlays.

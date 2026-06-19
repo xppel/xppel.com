@@ -15,7 +15,7 @@ let lightboxIndex = 0;
           {column.map((photo, columnItemIndex) => {
             const index = lightboxIndex++;
             return (
-              <a href={photo.data.image.src} class="photo-link" aria-label={`Open ${photo.data.title}`} data-lightbox-item data-lightbox-index={index}>
+              <a href={photo.data.image.src} class="photo-link" aria-label={`Open ${photo.data.title}`} data-lightbox-item data-lightbox-index={index} data-photo-reveal data-photo-reveal-index={index}>
                 <Image
                   src={photo.data.image}
                   alt={photo.data.alt ?? photo.data.title}

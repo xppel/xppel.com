@@ -40,6 +40,7 @@ let lastTriggerRect: DOMRect | null = null;
 let lightboxItems: HTMLAnchorElement[] = [];
 let lightboxClosing = false;
 let lightboxLoadToken = 0;
+let photoRevealNextAt = 0;
 const fetchedPages = new Map<string, Promise<string>>();
 const decodedImages = new Map<string, Promise<HTMLImageElement>>();
 
@@ -672,6 +673,7 @@ async function navigateApp(url: URL, replace = false) {
   }
 
   try {
+    updateActiveNavigation(url);
     const nextDocument = await getAppDocument(url);
     const nextMain = nextDocument.querySelector("#main");
     if (!(nextMain instanceof HTMLElement)) throw new Error("Fetched page did not contain #main");
@@ -709,6 +711,52 @@ async function navigateApp(url: URL, replace = false) {
   } catch {
     window.location.href = url.href;
   }
+}
+
+function initPhotoReveals() {
+  const images = Array.from(document.querySelectorAll("[data-photo-reveal] img"));
+  if (!images.length) return;
+
+  function queueReveal(image: HTMLImageElement) {
+    const now = performance.now();
+    const delay = Math.max(0, photoRevealNextAt - now);
+    photoRevealNextAt = Math.max(photoRevealNextAt, now) + 85;
+    window.setTimeout(() => {
+      requestAnimationFrame(() => {
+        image.classList.remove("photo-reveal-pending");
+        image.classList.add("is-photo-revealed");
+      });
+    }, delay);
+  }
+
+  images.forEach((image) => {
+    if (!(image instanceof HTMLImageElement) || image.dataset.photoRevealBound === "true") return;
+    image.dataset.photoRevealBound = "true";
+
+    if (motionQuery.matches) {
+      image.classList.add("is-photo-revealed");
+      return;
+    }
+
+    image.classList.add("photo-reveal-pending");
+    const revealWhenDecoded = async () => {
+      try {
+        await image.decode();
+      } catch {
+        // Images that cannot be decoded still need to become visible after loading.
+      }
+      queueReveal(image);
+    };
+
+    if (image.complete) {
+      void revealWhenDecoded();
+    } else {
+      image.addEventListener("load", () => void revealWhenDecoded(), { once: true });
+      image.addEventListener("error", () => {
+        image.classList.remove("photo-reveal-pending");
+      }, { once: true });
+    }
+  });
 }
 
 function initHybridGalleryNavigation() {
@@ -1410,6 +1458,7 @@ function initPage() {
   initLightbox();
   initCanopyArtwork();
   initProjectsIndex();
+  initPhotoReveals();
   initAudioPlayers();
   initClock();
 }
