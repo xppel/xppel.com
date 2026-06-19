@@ -1,0 +1,19 @@
+---
+type Props = {
+  preset?: "balanced" | "flowing" | "dense" | "mixed";
+  seed?: string;
+  crop?: "fluid";
+  texture?: "dither" | "none";
+  reveal?: "mask" | "none";
+};
+
+const {
+  preset = "mixed",
+  seed = "auto",
+  crop = "fluid",
+  texture = "dither",
+  reveal = "mask"
+} = Astro.props;
+---
+
+<div class="canopy-artwork" data-canopy-art data-preset={preset} data-seed={seed} data-crop={crop} data-texture={texture} data-reveal={reveal} aria-hidden="true"></div>

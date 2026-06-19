@@ -9,8 +9,10 @@ The site is a static Astro project. Most pages are generated from content collec
 - `src/layouts/BaseLayout.astro` wraps every page, sets metadata, renders the footer, and provides the site-wide lightbox shell.
 - `src/components/SiteChrome.astro` renders desktop navigation, mobile navigation, the floating logo, and project hover previews.
 - `src/components/Icon.astro` centralizes inline icon rendering.
-- `src/scripts/site.ts` initializes app-style navigation, page swaps, chrome behavior, sliders, swipe gestures, the lightbox, project index controls, and page-specific reinitializers.
-- `src/pages/index.astro` renders the homepage slideshow.
+- `src/components/CanopyArtwork.astro` renders the reusable procedural artwork mount point.
+- `src/scripts/site.ts` initializes app-style navigation, page swaps, chrome behavior, canopy artwork, the lightbox, project index controls, and page-specific reinitializers.
+- `src/scripts/canopy/` contains the seeded canopy generator, presets, leaf path definitions, cluster generation, and SVG mounting code.
+- `src/pages/index.astro` renders the procedural canopy homepage.
 - `src/pages/projects/index.astro` renders the searchable/filterable project index.
 - `src/pages/projects/[slug].astro` renders individual project pages from project content entries.
 - `src/pages/photos.astro` renders the photo grid from photo content entries.
@@ -35,8 +37,8 @@ Important fields:
 - `subtitle`: Short project deck line.
 - `projectId`: Display order. IDs should increase from oldest to newest; the site sorts higher IDs first.
 - `completed`: Month completed, formatted as `YYYY-MM`. This drives visible date labels and year dividers.
-- `thumbnail`: Local image used in the homepage slideshow, project index, and nav preview.
-- `home.show`: Controls homepage slideshow inclusion.
+- `thumbnail`: Local image used in the project index and nav preview.
+- `home.show`: Legacy metadata kept for project curation; the current homepage no longer builds a project slideshow from it.
 - `frame`: Primary project media. Use `type: "image"` with `image`, `type: "video"` with `poster` and `sources`, or `type: "youtube"` with `videoId` and `title`.
 - `taxonomy`: Filter/search categories.
 - `info`: Project location/client and notes.
@@ -83,11 +85,10 @@ Fields:
 
 ## Images
 
-Displayed local images should use Astro image assets from `src/content/` or another `src/` folder. The current pages use `Image` from `astro:assets` for rendered project, photo, and slideshow images.
+Displayed local images should use Astro image assets from `src/content/` or another `src/` folder. The current pages use `Image` from `astro:assets` for rendered project and photo images. The homepage canopy is generated as inline SVG at runtime.
 
 Current responsive image surfaces:
 
-- Homepage slideshow: `src/pages/index.astro`
 - Project index cards: `src/pages/projects/index.astro`
 - Project detail media and gallery: `src/pages/projects/[slug].astro`
 - Photo grid: `src/pages/photos.astro`
@@ -111,34 +112,37 @@ Use `public/` for files that should not be transformed, such as:
 
 When replacing `public/favicon.svg`, also bump the cache-busting query string in `src/layouts/BaseLayout.astro` and run `npm run build` so `dist/favicon.svg` matches the public source.
 
-## Homepage Slideshow
+## Homepage Canopy
 
-The homepage slideshow lives in `src/pages/index.astro`, with layout styles in `src/styles/global.css`.
+The homepage canopy lives in `src/pages/index.astro` and reuses `src/components/CanopyArtwork.astro`.
 
 Implementation notes:
 
-- The slideshow list is built from projects where `home.show` is true.
-- Slides are ordered by `projectId`, highest first.
-- The first slide is rendered as the current slide in Astro so first paint matches the enhanced layout.
-- Each `.home-slide-link` receives image-specific aspect-ratio CSS variables from Astro image metadata.
-- CSS sizes the slide link from the available stage height with `--home-slide-scale`, currently `0.94`, while capping at viewport width on small screens.
-- JavaScript only marks the slider `is-ready` after measuring a non-zero visible image/frame rect.
-- Previous/next zones are calculated from the visible `.home-slide-link` image bounds, not the larger slideshow container.
-- Empty space around the slideshow image is intentionally not a link target and keeps the normal cursor.
-- Arrow keys also move the slideshow.
-- Horizontal pointer swipes move slides on touch devices while preserving normal vertical page scrolling.
-- Autoplay runs at 2800ms and does not slow down on hover.
+- The component API is `<CanopyArtwork preset="mixed" seed="auto" />`.
+- The root element contract is `[data-canopy-art]` with developer-facing `data-preset`, `data-seed`, `data-crop`, `data-texture`, and `data-reveal` attributes.
+- `src/scripts/site.ts` calls `initCanopyArtwork()` after initial load and after Astro-style page swaps.
+- The generator always creates a full `1000 x 700` SVG scene and uses `preserveAspectRatio="xMidYMid slice"` so responsive cropping stays centered.
+- Forced structural growth is generated against a centered cover crop so tall/mobile frames do not reveal an empty or off-center composition.
+- `src/scripts/canopy/plantGraph.ts` generates rooted plant graphs before rendering, so stems, branches, pods, grasses, and leaves all have a parent chain back to an edge/offscreen root.
+- Current plant families are `tree`, `bush`, `vine`, `fern`, `grass`, and `podSpray`; presets weight these families by mood.
+- The generator uses five depth bands: `mist`, `far`, `middle`, `near`, and `foreground`.
+- Current planning notes treat the graph pass as a structural prototype, not the final visual grammar. The next canopy pass should reduce independent fragments, protect the middle opening, and make branches/stems read botanically rather than as random diagonal strokes.
+- The artwork is static after mount. There are no canopy CSS keyframes, SVG animation nodes, requestAnimationFrame loops, or animated filters.
+- Depth comes from solid grayscale layer colors, stroke weight, scale, density, and dither masks rather than layer opacity.
+- The reveal is a one-shot black overlay on `.canopy-artwork`; the SVG remains fully opaque so overlapping foliage does not become transparent through itself.
+- Typical rendered SVG size should stay under roughly 900 nodes; recent graph samples are well below that budget.
 
-When changing the slideshow, verify:
+When changing the canopy, verify:
 
-- Direct homepage loads show one current slide immediately, without a partial multi-slide arrangement.
-- The image remains centered, contained, proportionally sized, and rounded.
-- Rounded corners are visible.
-- Empty space above or beside the image is not clickable and does not show a pointer cursor.
-- Previous/next hit zones stay aligned to the measured image bounds.
-- Mobile still uses a single-column header and a 50vh slideshow area.
-- Mobile slideshow images stay within the viewport without horizontal overflow.
-- Swipe gestures do not trigger accidental link clicks unless the horizontal drag threshold is crossed.
+- Direct homepage loads show the framed canopy with a smooth masked reveal.
+- Mobile fills the nav-to-footer gap evenly without horizontal overflow.
+- The crop remains visually centered when moving between narrow and wide viewports.
+- Expanding from a small initial window still reveals a complete full-frame scene.
+- Mid-scene leaves, pods, and branches visually connect to an edge-origin stem or parent branch.
+- Seed samples across `balanced`, `flowing`, `dense`, and `mixed` include varied plant families without detached graph nodes.
+- Large foreground or near-layer strokes do not block the central opening or create accidental X-shaped/random-cross compositions.
+- No active animation is introduced unless explicitly planned and performance-tested.
+- `/` initializes correctly after direct loads and app-style navigation.
 
 ## Floating Logo
 
@@ -222,7 +226,7 @@ The displayed update date comes from `site.updated` in `src/data/site.ts`. Updat
 
 - Keep shared tokens in `:root` at the top of `src/styles/global.css`.
 - Desktop defaults come first; mobile overrides live in the `@media (max-width: 760px)` block.
-- Avoid changing global `img` rules to fix one page. Prefer page-specific classes such as `.home-slide-frame` or `.project-card-thumb`.
+- Avoid changing global `img` rules to fix one page. Prefer page-specific classes such as `.project-card-thumb`, `.project-frame`, or `.photo-link`.
 - Keep interactive hit areas stable with explicit dimensions or fixed containers.
 - For image surfaces, put border radius and clipping on a stable wrapper when Astro image output or object-fit behavior could vary.
 - Visible browser focus outlines are intentionally suppressed throughout the site. Use hover, active, selected, opacity, and border treatments for interaction feedback.
@@ -252,11 +256,11 @@ Browser-check:
 Specific visual checks:
 
 - Floating logo fades in after it is positioned.
-- Homepage slideshow images are centered, contained, rounded, and proportionally sized.
-- Direct homepage loads do not snap from a partial arrangement.
-- Homepage slideshow speed does not change on hover.
-- Empty homepage slideshow space is not clickable.
-- Homepage slideshow and lightbox respond to horizontal swipes on touch devices.
+- Homepage canopy is centered, framed, dithered, and fills the available nav-to-footer area.
+- Direct homepage loads show a smooth masked reveal without transparent overlapping foliage.
+- Homepage canopy remains static after generation with no animation loops or SVG animation nodes.
+- Homepage canopy keeps a complete full-frame composition when resizing from mobile to desktop.
+- Lightbox responds to horizontal swipes on touch devices.
 - Project cards do not crop thumbnails unexpectedly.
 - Project index direct load does not flicker between view or size states.
 - Mobile grid sizes render as S = 4, M = 3, and L = 2 columns.

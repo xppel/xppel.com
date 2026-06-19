@@ -42,7 +42,7 @@ const previewImages = new Map(
 
 <aside class="desktop-nav" aria-label="Primary navigation">
   <div class="brand-field" aria-label="A. Appel">
-    <a class="brand-bouncer" href="/" draggable="false" data-brand-bouncer>
+    <a class="brand-bouncer" href="/" draggable="false" data-brand-bouncer data-home-logo>
       <span>A. Appel <Icon name="broadcast" /></span>
     </a>
   </div>
@@ -91,7 +91,7 @@ const previewImages = new Map(
 
 <header class="mobile-header">
   <div class="mobile-topline">
-    <a class="mobile-brand" href="/" draggable="false" data-brand-bouncer>
+    <a class="mobile-brand" href="/" draggable="false" data-brand-bouncer data-home-logo>
       <span>A. Appel <Icon name="broadcast" /></span>
     </a>
     <button class="menu-button" type="button" aria-controls="mobile-menu" aria-expanded="false" data-menu-toggle>
@@ -110,7 +110,7 @@ const previewImages = new Map(
     <button class="menu-button close-button" type="button" aria-controls="mobile-menu" aria-expanded="true" data-menu-toggle>
       <Icon name="close" title="Close menu" />
     </button>
-    <a class="mobile-menu-brand" href="/">A. Appel <Icon name="broadcast" /></a>
+    <a class="mobile-menu-brand" href="/" data-home-logo>A. Appel <Icon name="broadcast" /></a>
     <nav class="primary-projects-link" aria-label="Mobile projects index">
       <a class:list={[isProjectsIndex && "active"]} href="/projects/"><Icon name="arrow" /> Projects</a>
     </nav>

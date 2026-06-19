@@ -1,3 +1,5 @@
+import { initCanopyArtwork, refreshCanopyArtwork } from "./canopy/generateScene";
+
 const PAGE_LOAD_EVENT = "xppel:page-load";
 const PROJECT_INDEX_PATH = "/projects/";
 const PROJECT_STATE_KEY = "xppel-project-index-state";
@@ -30,6 +32,7 @@ let brandInitialized = false;
 let logoFxInitialized = false;
 let previewInitialized = false;
 let galleryNavInitialized = false;
+let homeLogoRefreshInitialized = false;
 let lightboxShellInitialized = false;
 let activeLightboxIndex = 0;
 let lastLightboxTrigger: Element | null = null;
@@ -311,10 +314,33 @@ function initBrandBouncers() {
     brand.addEventListener("click", (event) => {
       if (!moved) return;
       event.preventDefault();
+      event.stopImmediatePropagation();
       moved = false;
     });
 
     tick();
+  });
+}
+
+function initHomeLogoRefresh() {
+  if (homeLogoRefreshInitialized) return;
+  homeLogoRefreshInitialized = true;
+
+  document.addEventListener("click", (event) => {
+    if (!(event instanceof MouseEvent) || !isPlainLeftClick(event)) return;
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const link = target.closest("[data-home-logo]");
+    if (!(link instanceof HTMLAnchorElement)) return;
+    const url = new URL(link.href, window.location.href);
+    if (!isCurrentHomePathNavigation(url)) return;
+    const canopy = document.querySelector("[data-canopy-art]");
+    if (!(canopy instanceof HTMLElement)) return;
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    document.dispatchEvent(new CustomEvent("xppel:close-menu"));
+    refreshCanopyArtwork(canopy);
   });
 }
 
@@ -1080,411 +1106,6 @@ function initLightbox() {
   });
 }
 
-function initHomeSlider() {
-  const slider = document.querySelector("[data-home-slider]");
-  if (!(slider instanceof HTMLElement) || slider.dataset.homeSliderBound === "true") return;
-  slider.dataset.homeSliderBound = "true";
-
-  const track = slider.querySelector(".home-track");
-  if (!(track instanceof HTMLElement)) return;
-
-  track.querySelectorAll("[data-slide-clone]").forEach((clone) => clone.remove());
-
-  const slides = Array.from(slider.querySelectorAll("[data-slide]")).filter((slide): slide is HTMLElement => slide instanceof HTMLElement);
-  if (slides.length === 0) return;
-
-  const canLoop = slides.length > 1;
-  const previous = slider.querySelector("[data-slide-prev]");
-  const next = slider.querySelector("[data-slide-next]");
-  const autoplayDelay = 2800;
-  const animationDuration = 920;
-  const easing = "cubic-bezier(0.22, 1, 0.36, 1)";
-  let autoplay = 0;
-  let activeIndex = 0;
-  let animating = false;
-  let animationTimer = 0;
-  let activeAnimations: Animation[] = [];
-  let suppressClick = false;
-  let dragPointerId = -1;
-  let dragStartX = 0;
-  let dragStartY = 0;
-  let dragDeltaX = 0;
-  let dragDirection = 0;
-  let dragTargetIndex = -1;
-  let didDrag = false;
-  let zoneFrame: HTMLElement | null = null;
-  let zoneImage: HTMLImageElement | null = null;
-  let zoneUpdateFrame = 0;
-  const zoneResizeObserver = "ResizeObserver" in window
-    ? new ResizeObserver(() => scheduleZoneBoundsUpdate())
-    : null;
-
-  function suppressNextClick() {
-    suppressClick = true;
-    window.setTimeout(() => {
-      suppressClick = false;
-    }, 450);
-  }
-
-  function slideWidth() {
-    return Math.max(1, slider.getBoundingClientRect().width);
-  }
-
-  function wrapIndex(index: number) {
-    return (index + slides.length) % slides.length;
-  }
-
-  function updateCurrentAttributes(currentIndex = activeIndex) {
-    slides.forEach((slide, index) => slide.toggleAttribute("aria-current", index === currentIndex));
-  }
-
-  function offsetTransform(offset: number, unit: "percent" | "px") {
-    return unit === "percent"
-      ? `translate3d(${offset * 100}%, 0, 0)`
-      : `translate3d(${offset}px, 0, 0)`;
-  }
-
-  function setSlideOffset(slide: HTMLElement, offset: number, unit: "percent" | "px" = "percent") {
-    slide.style.transition = "none";
-    slide.style.transform = offsetTransform(offset, unit);
-  }
-
-  function showSlide(slide: HTMLElement, offset: number, unit: "percent" | "px" = "percent") {
-    slide.classList.add("is-transitioning");
-    setSlideOffset(slide, offset, unit);
-  }
-
-  function hideSlide(slide: HTMLElement) {
-    slide.classList.remove("is-current", "is-transitioning");
-    slide.style.transition = "none";
-    slide.style.transform = "translate3d(0, 0, 0)";
-  }
-
-  function clearAnimationTimer() {
-    window.clearTimeout(animationTimer);
-    animationTimer = 0;
-  }
-
-  function cancelSlideAnimations() {
-    activeAnimations.forEach((animation) => animation.cancel());
-    activeAnimations = [];
-  }
-
-  function settleAt(index: number) {
-    clearAnimationTimer();
-    cancelSlideAnimations();
-    animating = false;
-    dragPointerId = -1;
-    dragDirection = 0;
-    dragTargetIndex = -1;
-    dragDeltaX = 0;
-    activeIndex = wrapIndex(index);
-    slides.forEach((slide, slideIndex) => {
-      if (slideIndex === activeIndex) {
-        slide.classList.add("is-current");
-        slide.classList.remove("is-transitioning");
-        slide.style.transition = "none";
-        slide.style.transform = "translate3d(0, 0, 0)";
-      } else {
-        hideSlide(slide);
-      }
-    });
-    updateCurrentAttributes(activeIndex);
-    scheduleZoneBoundsUpdate();
-  }
-
-  function animateToSettled(
-    targetIndex: number,
-    current: HTMLElement,
-    incoming: HTMLElement,
-    currentOffset: number,
-    incomingOffset: number,
-    unit: "percent" | "px"
-  ) {
-    if (motionQuery.matches) {
-      settleAt(targetIndex);
-      startAutoplay();
-      return;
-    }
-
-    let finished = false;
-    cancelSlideAnimations();
-    animating = true;
-
-    const finish = () => {
-      if (finished) return;
-      finished = true;
-      settleAt(targetIndex);
-      startAutoplay();
-    };
-
-    const options: KeyframeAnimationOptions = {
-      duration: animationDuration,
-      easing,
-      fill: "forwards"
-    };
-    const currentAnimation = current.animate([
-      { transform: getComputedStyle(current).transform },
-      { transform: offsetTransform(currentOffset, unit) }
-    ], options);
-    const incomingAnimation = incoming.animate([
-      { transform: getComputedStyle(incoming).transform },
-      { transform: offsetTransform(incomingOffset, unit) }
-    ], options);
-    activeAnimations = [currentAnimation, incomingAnimation];
-
-    Promise.allSettled(activeAnimations.map((animation) => animation.finished)).then(finish);
-    clearAnimationTimer();
-    animationTimer = window.setTimeout(finish, animationDuration + 120);
-  }
-
-  function clamp(value: number, min: number, max: number) {
-    return Math.min(max, Math.max(min, value));
-  }
-
-  function getZoneHitWidth(imageWidth: number) {
-    const isNarrow = window.matchMedia("(max-width: 760px)").matches;
-    const ratio = isNarrow ? 0.22 : 0.18;
-    const min = isNarrow ? 44 : 56;
-    const max = isNarrow ? 104 : 180;
-    const minimumCenter = Math.min(isNarrow ? 150 : 240, imageWidth * 0.5);
-    const maximumHit = Math.max(0, (imageWidth - minimumCenter) / 2);
-    return clamp(imageWidth * ratio, Math.min(min, maximumHit), Math.min(max, maximumHit));
-  }
-
-  function observeZoneSource(frame: HTMLElement, image: HTMLImageElement | null) {
-    if (!zoneResizeObserver) return;
-    if (zoneFrame !== frame) {
-      if (zoneFrame) zoneResizeObserver.unobserve(zoneFrame);
-      zoneFrame = frame;
-      zoneResizeObserver.observe(frame);
-    }
-    if (zoneImage !== image) {
-      if (zoneImage) zoneResizeObserver.unobserve(zoneImage);
-      zoneImage = image;
-      if (zoneImage) zoneResizeObserver.observe(zoneImage);
-    }
-  }
-
-  function updateZoneBounds() {
-    const activeSlide = slides[activeIndex] ?? slides[0];
-    const frame = activeSlide?.querySelector(".home-slide-link");
-    if (!(frame instanceof HTMLElement)) return;
-    const image = frame.querySelector("img");
-    const sliderRect = slider.getBoundingClientRect();
-    const imageRect = image instanceof HTMLImageElement ? image.getBoundingClientRect() : frame.getBoundingClientRect();
-    observeZoneSource(frame, image instanceof HTMLImageElement ? image : null);
-    const hasMeasuredImage = imageRect.width > 0 && imageRect.height > 0;
-    const left = Math.max(0, Math.min(Math.max(0, sliderRect.width - imageRect.width), imageRect.left - sliderRect.left));
-    const top = Math.max(0, Math.min(Math.max(0, sliderRect.height - imageRect.height), imageRect.top - sliderRect.top));
-    slider.style.setProperty("--home-zone-left", `${left}px`);
-    slider.style.setProperty("--home-zone-top", `${top}px`);
-    slider.style.setProperty("--home-zone-width", `${Math.max(0, imageRect.width)}px`);
-    slider.style.setProperty("--home-zone-height", `${Math.max(0, imageRect.height)}px`);
-    slider.style.setProperty("--home-zone-hit", `${getZoneHitWidth(Math.max(0, imageRect.width))}px`);
-    slider.classList.toggle("is-ready", hasMeasuredImage);
-  }
-
-  function scheduleZoneBoundsUpdate() {
-    if (zoneUpdateFrame) return;
-    zoneUpdateFrame = window.requestAnimationFrame(() => {
-      zoneUpdateFrame = 0;
-      updateZoneBounds();
-    });
-  }
-
-  function shouldPauseAutoplay() {
-    return motionQuery.matches ||
-      document.documentElement.classList.contains("menu-open") ||
-      document.documentElement.classList.contains("lightbox-open");
-  }
-
-  function startAutoplay() {
-    window.clearTimeout(autoplay);
-    if (!canLoop || motionQuery.matches) return;
-    autoplay = window.setTimeout(() => {
-      if (!shouldPauseAutoplay() && !animating && dragPointerId === -1) goNext();
-      startAutoplay();
-    }, autoplayDelay);
-  }
-
-  function moveTo(targetIndex: number, direction: 1 | -1) {
-    if (!canLoop) return;
-    if (animating || dragPointerId !== -1) return;
-    const nextIndex = wrapIndex(targetIndex);
-    if (nextIndex === activeIndex) return;
-    if (motionQuery.matches) {
-      settleAt(nextIndex);
-      return;
-    }
-
-    window.clearTimeout(autoplay);
-    animating = true;
-    const current = slides[activeIndex];
-    const incoming = slides[nextIndex];
-    slides.forEach((slide) => {
-      if (slide !== current && slide !== incoming) hideSlide(slide);
-    });
-    showSlide(current, 0);
-    showSlide(incoming, direction);
-    track.getBoundingClientRect();
-    animateToSettled(nextIndex, current, incoming, -direction, 0, "percent");
-  }
-
-  function goNext() {
-    moveTo(activeIndex + 1, 1);
-  }
-
-  function goPrevious() {
-    moveTo(activeIndex - 1, -1);
-  }
-
-  function prepareDragTarget(direction: 1 | -1, width: number) {
-    const targetIndex = wrapIndex(activeIndex + direction);
-    if (dragDirection === direction && dragTargetIndex === targetIndex) return;
-    dragDirection = direction;
-    dragTargetIndex = targetIndex;
-    slides.forEach((slide, index) => {
-      if (index !== activeIndex && index !== targetIndex) hideSlide(slide);
-    });
-    showSlide(slides[activeIndex], 0, "px");
-    showSlide(slides[targetIndex], direction * width, "px");
-  }
-
-  function finishDrag(complete: boolean) {
-    const direction = dragDirection as 1 | -1;
-    const targetIndex = dragTargetIndex;
-    const current = slides[activeIndex];
-    const incoming = slides[targetIndex];
-    if (!direction || targetIndex < 0 || !incoming) {
-      settleAt(activeIndex);
-      startAutoplay();
-      return;
-    }
-
-    const width = slideWidth();
-    animating = true;
-    animateToSettled(
-      complete ? targetIndex : activeIndex,
-      current,
-      incoming,
-      complete ? -direction * width : 0,
-      complete ? 0 : direction * width,
-      "px"
-    );
-  }
-
-  previous?.addEventListener("click", () => {
-    goPrevious();
-  });
-  next?.addEventListener("click", () => {
-    goNext();
-  });
-  slider.addEventListener("pointerdown", (event) => {
-    if (!canLoop || animating || event.pointerType === "mouse") return;
-    const target = event.target;
-    if (target instanceof Element && target.closest(".zone-button")) return;
-    dragPointerId = event.pointerId;
-    dragStartX = event.clientX;
-    dragStartY = event.clientY;
-    dragDeltaX = 0;
-    dragDirection = 0;
-    dragTargetIndex = -1;
-    didDrag = false;
-    slider.setPointerCapture(event.pointerId);
-    window.clearTimeout(autoplay);
-  }, { passive: true });
-  slider.addEventListener("pointermove", (event) => {
-    if (event.pointerId !== dragPointerId) return;
-    const deltaX = event.clientX - dragStartX;
-    const deltaY = event.clientY - dragStartY;
-    if (!didDrag && Math.abs(deltaX) > 8 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) didDrag = true;
-    if (!didDrag) return;
-    dragDeltaX = deltaX;
-    const width = slideWidth();
-    const direction = deltaX < 0 ? 1 : -1;
-    prepareDragTarget(direction, width);
-    const current = slides[activeIndex];
-    const incoming = slides[dragTargetIndex];
-    const clampedDelta = Math.max(-width, Math.min(width, deltaX));
-    setSlideOffset(current, clampedDelta, "px");
-    setSlideOffset(incoming, clampedDelta + direction * width, "px");
-  }, { passive: true });
-  slider.addEventListener("pointerup", (event) => {
-    if (event.pointerId !== dragPointerId) return;
-    const threshold = Math.min(120, Math.max(44, slideWidth() * 0.12));
-    if (didDrag) suppressNextClick();
-    if (didDrag && Math.abs(dragDeltaX) > threshold) {
-      finishDrag(true);
-    } else {
-      finishDrag(false);
-    }
-    dragPointerId = -1;
-  }, { passive: true });
-  slider.addEventListener("pointercancel", () => {
-    if (dragPointerId === -1) return;
-    dragPointerId = -1;
-    finishDrag(false);
-  });
-  slider.addEventListener("dragstart", (event) => {
-    event.preventDefault();
-  });
-  slider.addEventListener("selectstart", (event) => {
-    event.preventDefault();
-  });
-  slider.addEventListener("click", (event) => {
-    if (suppressClick) {
-      event.preventDefault();
-      event.stopPropagation();
-      suppressClick = false;
-      return;
-    }
-    if (!(event instanceof MouseEvent) || !isPlainLeftClick(event)) return;
-    const target = event.target;
-    if (!(target instanceof Element) || target.closest(".zone-button")) return;
-    const link = target.closest(".home-slide-link[href]");
-    if (!(link instanceof HTMLAnchorElement)) return;
-    event.preventDefault();
-    event.stopPropagation();
-    const url = new URL(link.href, window.location.href);
-    if (url.origin === window.location.origin && isAppPath(url.pathname)) {
-      navigateApp(url);
-    } else {
-      window.location.href = url.href;
-    }
-  }, true);
-  window.addEventListener("keydown", (event) => {
-    if (!document.querySelector("[data-home-slider]")) return;
-    if (event.key === "ArrowLeft") {
-      goPrevious();
-    }
-    if (event.key === "ArrowRight") {
-      goNext();
-    }
-  });
-  slides.forEach((slide) => {
-    const image = slide.querySelector("img");
-    if (image instanceof HTMLImageElement) {
-      image.addEventListener("load", () => scheduleZoneBoundsUpdate());
-    }
-  });
-  if (zoneResizeObserver) zoneResizeObserver.observe(slider);
-  window.addEventListener("resize", () => {
-    settleAt(activeIndex);
-  });
-  window.addEventListener("orientationchange", () => {
-    window.setTimeout(() => settleAt(activeIndex), 120);
-  });
-  window.addEventListener("load", () => scheduleZoneBoundsUpdate());
-  motionQuery.addEventListener("change", () => {
-    settleAt(activeIndex);
-    startAutoplay();
-  });
-  slider.classList.add("is-enhanced");
-  settleAt(0);
-  startAutoplay();
-}
-
 function readProjectIndexStorage() {
   try {
     const stored = sessionStorage.getItem(PROJECT_STATE_KEY);
@@ -1780,7 +1401,7 @@ function initClock() {
 function initPage() {
   initExternalLinks();
   initLightbox();
-  initHomeSlider();
+  initCanopyArtwork();
   initProjectsIndex();
   initAudioPlayers();
   initClock();
@@ -1792,6 +1413,7 @@ function boot() {
   initMobileMenu();
   initBrandBouncers();
   initLogoFx();
+  initHomeLogoRefresh();
   initNavPreview();
   initHybridGalleryNavigation();
   document.addEventListener(PAGE_LOAD_EVENT, initPage);

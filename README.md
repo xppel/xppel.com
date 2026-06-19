@@ -9,7 +9,7 @@ The site is built with [Astro](https://astro.build/) and published at [xppel.com
 - App-style navigation that swaps site content without reloading the full page when browsing internal routes.
 - Project index with search, filters, responsive grid/list views, stable mobile zoom levels, and year-based navigation.
 - Project pages with optimized images and support for image, GIF, video, and YouTube media.
-- Homepage slideshow of selected work with stable first paint, proportional image sizing, keyboard, click-zone, and touch-swipe navigation.
+- Procedural canopy homepage artwork with seeded SVG generation, responsive centered cropping, dithered monochrome depth, and a one-shot masked reveal.
 - Photo grid with optimized Astro images.
 - Custom audio players for music.
 - Desktop project hover previews, a smooth shared lightbox with stable fullscreen image sizing, and a lightweight procedural logo click effect.
@@ -51,13 +51,16 @@ If `4321` is already in use, Astro will choose the next available local port.
 - `src/components/` contains shared UI components.
 - `src/layouts/BaseLayout.astro` contains shared metadata, the footer, the lightbox shell, and script/style entry points.
 - `src/components/SiteChrome.astro` contains desktop/mobile navigation, the floating logo, and project hover preview markup.
-- `src/scripts/site.ts` contains app-style navigation, chrome initialization, lightbox behavior, sliders, swipe gestures, and page reinitializers.
+- `src/components/CanopyArtwork.astro` contains the reusable procedural artwork mount point used by the homepage.
+- `src/scripts/site.ts` contains app-style navigation, chrome initialization, lightbox behavior, canopy initialization, swipe gestures, and page reinitializers.
+- `src/scripts/canopy/` contains the seeded canopy generator, scene presets, connected plant graph generation, leaf definitions, SVG rendering, and mounting code.
 - `src/content/` contains project, photo, and music entries.
 - `src/content.config.ts` validates content collection frontmatter.
 - `src/data/` contains shared site data and collection helpers.
 - `src/styles/global.css` contains the main visual system and responsive rules.
 - `public/` contains static files copied through unchanged, including PDFs, `CNAME`, and `.nojekyll`.
 - `docs/maintenance.md` documents content conventions and common maintenance tasks.
+- `docs/canopy.md` documents the current canopy implementation and near-term generation roadmap.
 
 ## Content
 
