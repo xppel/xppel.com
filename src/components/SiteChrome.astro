@@ -79,7 +79,6 @@ const previewImages = new Map(
     <a class:list={["nav-stable-link", activeSlug === "photos" && "active"]} href="/photos/" data-nav-label="Photos"><Icon name="arrow" /> <span class="nav-label">Photos</span></a>
     <span class="nav-gap" aria-hidden="true"></span>
     <a class:list={["nav-stable-link", activeSlug === "about" && "active"]} href="/about/" data-nav-label="About"><Icon name="arrow" /> <span class="nav-label">About</span></a>
-    <a class="nav-stable-link" href={site.links.email} data-nav-label="Email"><Icon name="external" /> <span class="nav-label">Email</span></a>
   </nav>
   <div class="nav-preview" aria-hidden="true" data-nav-preview>
     <span class="nav-preview-line" aria-hidden="true"></span>
@@ -101,7 +100,6 @@ const previewImages = new Map(
   <nav class="mobile-quick-links" aria-label="Quick links">
     <a class:list={["nav-stable-link", isProjectsIndex && "active"]} href="/projects/" data-nav-label="Projects"><Icon name="arrow" /> <span class="nav-label">Projects</span></a>
     <a class:list={["nav-stable-link", activeSlug === "about" && "active"]} href="/about/" data-nav-label="About"><Icon name="arrow" /> <span class="nav-label">About</span></a>
-    <a class="nav-stable-link" href={site.links.email} data-nav-label="Email"><Icon name="external" /> <span class="nav-label">Email</span></a>
   </nav>
 </header>
 
@@ -112,7 +110,7 @@ const previewImages = new Map(
     </button>
     <a class="mobile-menu-brand" href="/" data-home-logo>A. Appel <Icon name="broadcast" /></a>
     <nav class="primary-projects-link" aria-label="Mobile projects index">
-      <a class:list={[isProjectsIndex && "active"]} href="/projects/"><Icon name="arrow" /> Projects</a>
+      <a class:list={["nav-stable-link", isProjectsIndex && "active"]} href="/projects/" data-nav-label="Projects"><Icon name="arrow" /> <span class="nav-label">Projects</span></a>
     </nav>
     <div class="work-list" aria-label="Mobile project navigation">
       {projectGroups.map((group) => (
@@ -131,11 +129,10 @@ const previewImages = new Map(
       ))}
     </div>
     <nav class="secondary-links" aria-label="Mobile secondary navigation">
-      <a class:list={[activeSlug === "music" && "active"]} href="/music/"><Icon name="arrow" /> Music</a>
-      <a class:list={[activeSlug === "photos" && "active"]} href="/photos/"><Icon name="arrow" /> Photos</a>
+      <a class:list={["nav-stable-link", activeSlug === "music" && "active"]} href="/music/" data-nav-label="Music"><Icon name="arrow" /> <span class="nav-label">Music</span></a>
+      <a class:list={["nav-stable-link", activeSlug === "photos" && "active"]} href="/photos/" data-nav-label="Photos"><Icon name="arrow" /> <span class="nav-label">Photos</span></a>
       <span class="nav-gap" aria-hidden="true"></span>
-      <a class:list={[activeSlug === "about" && "active"]} href="/about/"><Icon name="arrow" /> About</a>
-      <a href={site.links.email}><Icon name="external" /> Email</a>
+      <a class:list={["nav-stable-link", activeSlug === "about" && "active"]} href="/about/" data-nav-label="About"><Icon name="arrow" /> <span class="nav-label">About</span></a>
     </nav>
   </div>
 </div>

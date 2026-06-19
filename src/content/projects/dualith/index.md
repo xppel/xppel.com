@@ -31,6 +31,6 @@ info:
 portfolioLink: false
 ---
 
-This was a high school project and my first exposure to designing with electronics, microcontrollers, and browser-based controls.
+A high school project, and my first time designing with electronics, microcontrollers, and browser-based controls.
 
-I made an adjustable lamp that could act as both a task light and a comfortable source of colorful ambient lighting. It used a wifi-enabled MCU connected to an RGB LED strip, which I could adjust through a simple webpage or app interface.
+I made an adjustable lamp that works as both a focused task light and a softer source of colorful ambient light. A wifi-enabled MCU drives an RGB LED strip, controlled through a simple webpage or app.

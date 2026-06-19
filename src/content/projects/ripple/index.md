@@ -1,7 +1,7 @@
 ---
 title: "Ripple"
 slug: "ripple"
-subtitle: "Productivity-focused management & operations PDA."
+subtitle: "Productivity-focused operation management PDA."
 projectId: 5
 completed: "2025-05"
 thumbnail: "./thumbnail.png"
@@ -33,8 +33,8 @@ info:
 portfolioLink: true
 ---
 
-Ripple is a concept for a handheld PDA (personal digital assistant) designed to provide better support for retail employees and managers in daily store operations.
+Ripple is a concept for a handheld PDA (personal digital assistant) that better supports retail staff and managers through the daily work of running a store.
 
-Focusing on inventory management, pricing, customer assistance, and task coordination, the design emphasizes single-handed usability, intuitive navigation, and ergonomic efficiency. It uses stereoscopic sensors for spatial tracking and more context-aware store workflows.
+It brings inventory, pricing, customer assistance, and task coordination into one device built for single-handed use, with intuitive navigation and an ergonomic form. LiDAR and infrared sensing give it deep spatial awareness, letting it respond to its surroundings and support more context-aware workflows.
 
-The solution streamlines workflows to reduce physical and cognitive strain in fast-paced retail environments.
+The aim was to streamline those workflows and ease the physical and cognitive strain of a fast-paced retail floor.

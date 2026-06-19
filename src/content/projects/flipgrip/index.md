@@ -29,8 +29,8 @@ info:
 portfolioLink: false
 ---
 
-FlipGrip was a second-year university project developed through a collaborative brief with a UK boat manufacturer.
+FlipGrip was a second-year project developed from a collaborative brief with a UK boat manufacturer.
 
-The brief was to help prevent factory workers getting RSI. Caulking guns were selected as one of the major contributors to this issue, specifically those designed for foil-packaged adhesives and sealants, not plastic tubes.
+The brief asked us to help prevent repetitive strain injury among factory workers. I focused on caulking guns, one of the bigger contributors, specifically the heavy-duty type made for foil-packaged adhesives and sealants rather than plastic tubes.
 
-My response was a collar and brace mechanism that users could adjust while working. It could be retrofitted to existing guns and paired with improved ergonomic trigger handles, reducing strain without requiring workers to replace familiar tools.
+My response was an adjustable collar-and-brace mechanism workers could reposition mid-task. It retrofits onto existing guns and pairs with a reworked ergonomic trigger handle, easing strain without asking anyone to give up the tools they already know.

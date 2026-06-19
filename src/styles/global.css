@@ -322,15 +322,16 @@ p + p {
 
 .nav-stable-link {
   display: inline-grid !important;
-  grid-template-columns: 1em minmax(0, max-content);
+  grid-template-columns: 1.18em minmax(0, max-content);
   align-items: center;
-  column-gap: 0.25em;
+  column-gap: 0.28em;
   width: max-content;
 }
 
 .nav-stable-link > .icon {
   grid-column: 1;
   grid-row: 1;
+  justify-self: start;
 }
 
 .nav-stable-link > .nav-label,
@@ -564,24 +565,36 @@ p + p {
   color: #fff;
 }
 
+.canopy-atmosphere {
+  color: #747474;
+}
+
+.canopy-layer-haze {
+  color: #383838;
+}
+
 .canopy-layer-mist {
   color: #4f4f4f;
 }
 
 .canopy-layer-far {
-  color: #666;
+  color: #636363;
+}
+
+.canopy-layer-back {
+  color: #797979;
 }
 
 .canopy-layer-middle {
-  color: #929292;
+  color: #8f8f8f;
 }
 
 .canopy-layer-near {
-  color: #cecece;
+  color: #bdbdbd;
 }
 
 .canopy-layer-foreground {
-  color: #fff;
+  color: #e8e8e8;
 }
 
 .canopy-cluster {
@@ -1381,6 +1394,10 @@ html[data-project-index-view="list"] .projects-index .project-card-tags a:nth-ch
 .track-heading {
   display: block;
   margin-bottom: 0.9rem;
+  color: var(--text-soft);
+  font-size: 1.72rem;
+  font-weight: 330;
+  line-height: 1.28;
 }
 
 .audio-player {
@@ -1634,6 +1651,9 @@ html[data-project-index-view="list"] .projects-index .project-card-tags a:nth-ch
   height: auto;
   max-height: 100%;
   margin: 0;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: #000;
 }
 
 .lightbox-frame img {
@@ -1641,7 +1661,7 @@ html[data-project-index-view="list"] .projects-index .project-card-tags a:nth-ch
   inset: 0;
   width: 100%;
   height: 100%;
-  border-radius: var(--radius);
+  border-radius: inherit;
   object-fit: contain;
   transform-origin: center center;
   transition: opacity 160ms ease;

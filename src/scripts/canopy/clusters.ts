@@ -13,8 +13,10 @@ function createSvgElement<K extends keyof SVGElementTagNameMap>(documentRef: Doc
 }
 
 function connectorScaleForLayer(layer: LayerConfig) {
+  if (layer.key === "haze") return 0.36;
   if (layer.key === "mist") return 0.48;
   if (layer.key === "far") return 0.64;
+  if (layer.key === "back") return 0.72;
   if (layer.key === "middle") return 0.82;
   if (layer.key === "near") return 0.96;
   return 1.08;
@@ -78,8 +80,10 @@ function lightDistance(point: Point, light: LightZone) {
 
 function textureAllowed(point: Point, layer: LayerConfig, light: LightZone) {
   const distance = lightDistance(point, light);
+  if (layer.key === "haze") return distance > 0.62;
   if (layer.key === "mist") return distance > 0.72;
   if (layer.key === "far") return distance > 0.82;
+  if (layer.key === "back") return distance > 0.92;
   if (layer.key === "middle") return distance > 1.02;
   if (layer.key === "near") return distance > 1.16;
   return distance > 1.28;
@@ -115,12 +119,103 @@ function appendTexturePath(documentRef: Document, parent: SVGGElement, point: Po
   parent.append(path);
 }
 
+function atmosphereAllowed(point: Point, light: LightZone) {
+  return lightDistance(point, light) > 0.58;
+}
+
+function appendVeilBand(documentRef: Document, parent: SVGGElement, rng: Rng, crop: CropRect, light: LightZone) {
+  const fromLeft = rng.chance(0.5);
+  const edgeY = rng.weighted([
+    { value: rng.float(crop.y + crop.height * 0.05, crop.y + crop.height * 0.32), weight: 1.15 },
+    { value: rng.float(crop.y + crop.height * 0.68, crop.y + crop.height * 0.96), weight: 1.25 },
+    { value: rng.float(crop.y + crop.height * 0.34, crop.y + crop.height * 0.66), weight: 0.45 }
+  ]);
+  const start = {
+    x: fromLeft ? rng.float(crop.x - 70, crop.x + crop.width * 0.18) : rng.float(crop.x + crop.width * 0.82, crop.x + crop.width + 70),
+    y: edgeY
+  };
+  const direction = fromLeft ? 1 : -1;
+  const length = rng.float(crop.width * 0.16, crop.width * 0.34);
+  const drift = rng.float(-crop.height * 0.08, crop.height * 0.08);
+  const end = {
+    x: start.x + direction * length,
+    y: start.y + drift
+  };
+  const c1 = {
+    x: start.x + direction * length * rng.float(0.22, 0.42),
+    y: start.y + rng.float(-42, 42)
+  };
+  const c2 = {
+    x: start.x + direction * length * rng.float(0.62, 0.86),
+    y: end.y + rng.float(-42, 42)
+  };
+  const midpoint = {
+    x: (start.x + end.x) / 2,
+    y: (start.y + end.y) / 2
+  };
+  const centerMultiplier = atmosphereAllowed(midpoint, light) ? 1 : 0.42;
+  const path = createSvgElement(documentRef, "path");
+  path.setAttribute("d", `M ${start.x.toFixed(1)} ${start.y.toFixed(1)} C ${c1.x.toFixed(1)} ${c1.y.toFixed(1)} ${c2.x.toFixed(1)} ${c2.y.toFixed(1)} ${end.x.toFixed(1)} ${end.y.toFixed(1)}`);
+  path.setAttribute("fill", "none");
+  path.setAttribute("stroke", "currentColor");
+  path.setAttribute("stroke-width", rng.float(0.75, 2.2).toFixed(2));
+  path.setAttribute("stroke-linecap", "round");
+  path.setAttribute("stroke-dasharray", `${rng.float(18, 54).toFixed(1)} ${rng.float(14, 44).toFixed(1)}`);
+  path.setAttribute("opacity", (rng.float(0.055, 0.15) * centerMultiplier).toFixed(3));
+  parent.append(path);
+}
+
+export function appendAtmosphericVeil(documentRef: Document, svg: SVGSVGElement, light: LightZone, crop: CropRect, rng: Rng) {
+  const group = createSvgElement(documentRef, "g");
+  group.classList.add("canopy-atmosphere");
+  let veilNodeCount = 0;
+  let veilBandCount = 0;
+
+  for (let index = 0; index < 28; index += 1) {
+    appendVeilBand(documentRef, group, rng, crop, light);
+    veilNodeCount += 1;
+    veilBandCount += 1;
+  }
+
+  for (let index = 0; index < 130; index += 1) {
+    let point = edgeBiasedTexturePoint(rng, crop);
+    for (let attempt = 0; attempt < 10 && !atmosphereAllowed(point, light); attempt += 1) {
+      point = edgeBiasedTexturePoint(rng, crop);
+    }
+    const centerMultiplier = atmosphereAllowed(point, light) ? 1 : 0.35;
+    const circle = createSvgElement(documentRef, "circle");
+    circle.setAttribute("cx", point.x.toFixed(1));
+    circle.setAttribute("cy", point.y.toFixed(1));
+    circle.setAttribute("r", rng.float(0.75, 2.8).toFixed(2));
+    circle.setAttribute("fill", "currentColor");
+    circle.setAttribute("opacity", (rng.float(0.035, 0.12) * centerMultiplier).toFixed(3));
+    group.append(circle);
+    veilNodeCount += 1;
+  }
+
+  for (let index = 0; index < 18; index += 1) {
+    let point = edgeBiasedTexturePoint(rng, crop);
+    for (let attempt = 0; attempt < 10 && !atmosphereAllowed(point, light); attempt += 1) {
+      point = edgeBiasedTexturePoint(rng, crop);
+    }
+    appendTexturePath(documentRef, group, point, rng.float(-16, 16), rng.float(82, 180), rng.float(0.45, 0.9), rng.float(0.045, 0.095));
+    veilNodeCount += 1;
+  }
+
+  group.dataset.veilNodeCount = String(veilNodeCount);
+  group.dataset.veilBandCount = String(veilBandCount);
+  group.dataset.atmosphereNodeCount = String(veilNodeCount);
+  svg.append(group);
+
+  return { veilNodeCount, veilBandCount, atmosphereNodeCount: veilNodeCount };
+}
+
 function appendLayerTexture(documentRef: Document, layerGroup: SVGGElement, layer: LayerConfig, light: LightZone, crop: CropRect, rng: Rng) {
   const group = createSvgElement(documentRef, "g");
   group.classList.add("canopy-texture");
-  const isAtmospheric = layer.key === "mist" || layer.key === "far";
-  const atmosphereTarget = layer.key === "mist" ? 96 : layer.key === "far" ? 58 : 0;
-  const textureTarget = layer.key === "far" ? 48 : layer.key === "middle" ? 40 : layer.key === "near" ? 26 : 0;
+  const isAtmospheric = layer.key === "haze" || layer.key === "mist" || layer.key === "far";
+  const atmosphereTarget = layer.key === "haze" ? 74 : layer.key === "mist" ? 92 : layer.key === "far" ? 68 : 0;
+  const textureTarget = layer.key === "far" ? 58 : layer.key === "back" ? 52 : layer.key === "middle" ? 46 : layer.key === "near" ? 30 : 0;
   let atmosphereNodeCount = 0;
   let textureNodeCount = 0;
 
@@ -133,21 +228,21 @@ function appendLayerTexture(documentRef: Document, layerGroup: SVGGElement, laye
     const circle = createSvgElement(documentRef, "circle");
     circle.setAttribute("cx", point.x.toFixed(1));
     circle.setAttribute("cy", point.y.toFixed(1));
-    circle.setAttribute("r", rng.float(layer.key === "mist" ? 0.45 : 0.35, layer.key === "mist" ? 1.55 : 1.05).toFixed(2));
+    circle.setAttribute("r", rng.float(layer.key === "haze" ? 0.6 : layer.key === "mist" ? 0.5 : 0.38, layer.key === "haze" ? 2.2 : layer.key === "mist" ? 1.75 : 1.18).toFixed(2));
     circle.setAttribute("fill", "currentColor");
-    circle.setAttribute("opacity", rng.float(layer.key === "mist" ? 0.07 : 0.05, layer.key === "mist" ? 0.18 : 0.13).toFixed(3));
+    circle.setAttribute("opacity", rng.float(layer.key === "haze" ? 0.08 : layer.key === "mist" ? 0.07 : 0.05, layer.key === "haze" ? 0.2 : layer.key === "mist" ? 0.18 : 0.13).toFixed(3));
     group.append(circle);
     atmosphereNodeCount += 1;
   }
 
   if (isAtmospheric) {
-    const contourCount = layer.key === "mist" ? 18 : 10;
+    const contourCount = layer.key === "haze" ? 22 : layer.key === "mist" ? 18 : 12;
     for (let index = 0; index < contourCount; index += 1) {
       const y = rng.float(crop.y + crop.height * 0.04, crop.y + crop.height * 0.96);
       const fromLeft = rng.chance(0.5);
       const startX = fromLeft ? rng.float(-20, VIEWBOX.width * 0.18) : rng.float(VIEWBOX.width * 0.82, VIEWBOX.width + 20);
-      const length = rng.float(30, layer.key === "mist" ? 92 : 64);
-      appendTexturePath(documentRef, group, { x: startX, y }, rng.float(-10, 10) + (fromLeft ? 0 : 180), length, layer.key === "mist" ? 0.42 : 0.34, rng.float(0.04, 0.1));
+      const length = rng.float(36, layer.key === "haze" ? 128 : layer.key === "mist" ? 96 : 68);
+      appendTexturePath(documentRef, group, { x: startX, y }, rng.float(-10, 10) + (fromLeft ? 0 : 180), length, layer.key === "haze" ? 0.5 : layer.key === "mist" ? 0.42 : 0.34, rng.float(layer.key === "haze" ? 0.055 : 0.04, layer.key === "haze" ? 0.13 : 0.1));
       atmosphereNodeCount += 1;
     }
   }
@@ -278,6 +373,7 @@ export function appendLayerClusters(
   layerGroup.dataset.curveProfileCounts = JSON.stringify(audit.curveProfileCounts);
   layerGroup.dataset.atmosphereNodeCount = String(textureAudit.atmosphereNodeCount);
   layerGroup.dataset.textureNodeCount = String(textureAudit.textureNodeCount);
+  layerGroup.dataset.depthLayer = String(layer.key === "haze" || layer.key === "back");
 
   graphs.forEach((graph) => {
     const group = createSvgElement(documentRef, "g");

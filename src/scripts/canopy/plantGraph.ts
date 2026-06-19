@@ -159,6 +159,14 @@ function openingModeForLayer(layer: LayerConfig, openingMode: OpeningMode) {
   return openingMode;
 }
 
+function layerIsDistant(layer: LayerConfig) {
+  return layer.key === "haze" || layer.key === "mist" || layer.key === "far";
+}
+
+function layerIsRearCanopy(layer: LayerConfig) {
+  return layer.key === "haze" || layer.key === "mist" || layer.key === "far" || layer.key === "back";
+}
+
 function edgeDistance(point: Point) {
   return Math.min(point.x, VIEWBOX.width - point.x, point.y, VIEWBOX.height - point.y);
 }
@@ -290,12 +298,12 @@ function familiesForPreset(preset: ScenePreset): readonly { value: PlantFamily; 
 }
 
 function layerKeysForFamily(family: PlantFamily, preset: ScenePreset, rng: Rng) {
-  if (family === "tree") return preset.name === "dense" ? ["middle", "near", "foreground"] : ["far", "middle", "near", "foreground"];
-  if (family === "bush") return rng.chance(0.68) ? ["far", "middle", "near", "foreground"] : ["middle", "near", "foreground"];
-  if (family === "vine") return rng.chance(0.72) ? ["mist", "far", "middle", "near"] : ["far", "middle", "near", "foreground"];
-  if (family === "fern") return rng.chance(0.64) ? ["mist", "far", "middle", "near"] : ["far", "middle", "near"];
-  if (family === "grass") return rng.chance(0.58) ? ["middle", "near", "foreground"] : ["near", "foreground"];
-  return rng.chance(0.62) ? ["far", "middle", "near"] : ["mist", "far", "middle"];
+  if (family === "tree") return preset.name === "dense" ? ["back", "middle", "near", "foreground"] : ["far", "back", "middle", "near", "foreground"];
+  if (family === "bush") return rng.chance(0.68) ? ["far", "back", "middle", "near", "foreground"] : ["back", "middle", "near"];
+  if (family === "vine") return rng.chance(0.72) ? ["haze", "mist", "far", "back", "middle", "near"] : ["far", "back", "middle", "near", "foreground"];
+  if (family === "fern") return rng.chance(0.64) ? ["haze", "mist", "far", "back", "middle", "near"] : ["far", "back", "middle", "near"];
+  if (family === "grass") return rng.chance(0.5) ? ["back", "middle", "near", "foreground"] : ["middle", "near", "foreground"];
+  return rng.chance(0.62) ? ["far", "back", "middle", "near"] : ["haze", "mist", "far", "back", "middle"];
 }
 
 function layerSupportsFamily(layer: LayerConfig, family: PlantFamily) {
@@ -355,24 +363,28 @@ function inwardAngleForSide(side: EdgeSide, family: PlantFamily, rng: Rng) {
 }
 
 function layerStrokeScale(layer: LayerConfig) {
-  if (layer.key === "mist") return 0.52;
-  if (layer.key === "far") return 0.68;
-  if (layer.key === "middle") return 0.9;
-  if (layer.key === "near") return 1.12;
-  return 1.34;
+  if (layer.key === "haze") return 0.38;
+  if (layer.key === "mist") return 0.46;
+  if (layer.key === "far") return 0.58;
+  if (layer.key === "back") return 0.72;
+  if (layer.key === "middle") return 0.78;
+  if (layer.key === "near") return 0.94;
+  return 1.08;
 }
 
 function minimumReach(layer: LayerConfig, forcedSide?: EdgeSide) {
-  const base = layer.key === "mist" ? 175 : layer.key === "far" ? 215 : layer.key === "middle" ? 255 : layer.key === "near" ? 325 : 370;
+  const base = layer.key === "haze" ? 155 : layer.key === "mist" ? 175 : layer.key === "far" ? 215 : layer.key === "back" ? 238 : layer.key === "middle" ? 265 : layer.key === "near" ? 320 : 355;
   return forcedSide ? base + 45 : base;
 }
 
 function layerVisualWeight(layer: LayerConfig) {
-  if (layer.key === "mist") return 0.35;
-  if (layer.key === "far") return 0.5;
-  if (layer.key === "middle") return 0.72;
-  if (layer.key === "near") return 1;
-  return 1.24;
+  if (layer.key === "haze") return 0.26;
+  if (layer.key === "mist") return 0.32;
+  if (layer.key === "far") return 0.44;
+  if (layer.key === "back") return 0.58;
+  if (layer.key === "middle") return 0.68;
+  if (layer.key === "near") return 0.86;
+  return 1.02;
 }
 
 function pointInsideCrop(point: Point, crop: CropRect) {
@@ -585,7 +597,7 @@ function stemSamplesNearProtectedCenter(stem: StemSegment, light: LightZone, ope
 }
 
 function maxProtectedStemCoverage(layer: LayerConfig, stem: StemSegment, openingMode: OpeningMode = "quiet") {
-  const base = layer.key === "mist" ? 0.42 : layer.key === "far" ? 0.34 : layer.key === "middle" ? 0.2 : layer.key === "near" ? 0.1 : 0.06;
+  const base = layer.key === "haze" ? 0.52 : layer.key === "mist" ? 0.44 : layer.key === "far" ? 0.36 : layer.key === "back" ? 0.28 : layer.key === "middle" ? 0.2 : layer.key === "near" ? 0.09 : 0.055;
   const modeMultiplier = layer.key === "near" || layer.key === "foreground" ? 1 : openingMode === "dense" ? 1.55 : openingMode === "soft" ? 1.25 : 1;
   if ((layer.key === "near" || layer.key === "foreground") && stem.role === "blade") return base * 0.7;
   if (stem.role === "twig" || stem.role === "blade") return base * 1.35 * modeMultiplier;
@@ -645,17 +657,20 @@ function foliageRiskInProtectedZone(foliage: FoliageNode, light: LightZone, laye
   const connectorCoverage = segmentProtectedCoverage(foliage.connectorStart, foliage.point, light, effectiveMode);
   const connectorLength = Math.hypot(foliage.point.x - foliage.connectorStart.x, foliage.point.y - foliage.connectorStart.y);
 
-  if (layer.key === "mist" || layer.key === "far") return (distance < 0.52 || connectorCoverage > 0.36) && visualScale > (openingMode === "quiet" ? 0.62 : 0.78);
+  if (layerIsDistant(layer)) return (distance < 0.48 || connectorCoverage > 0.4) && visualScale > (openingMode === "quiet" ? 0.58 : 0.74);
+  if (layer.key === "back") return (distance < 0.64 || connectorCoverage > 0.28) && visualScale > (openingMode === "quiet" ? 0.68 : 0.84);
   if (layer.key === "middle") return (distance < 0.74 || footprintHit || connectorCoverage > 0.22) && visualScale > (openingMode === "quiet" ? 0.78 : 0.94);
   return footprintHit || visualScale > 0.86 && distance < 1 || connectorCoverage > 0.12 && connectorLength > 12;
 }
 
 function minVisibleParentLength(layer: LayerConfig) {
+  if (layer.key === "haze") return 8;
   if (layer.key === "mist") return 12;
   if (layer.key === "far") return 18;
-  if (layer.key === "middle") return 32;
-  if (layer.key === "near") return 44;
-  return 54;
+  if (layer.key === "back") return 24;
+  if (layer.key === "middle") return 30;
+  if (layer.key === "near") return 40;
+  return 48;
 }
 
 function foliageVisibleInCrop(foliage: FoliageNode, crop: CropRect) {
@@ -782,12 +797,13 @@ function leafDirectionAngle(attachment: AttachmentPoint, side: -1 | 1, family: P
 
 function connectorLengthForLeaf(family: PlantFamily, leafType: LeafType, layer: LayerConfig, scale: number, rng: Rng) {
   const nearLayer = layer.key === "near" || layer.key === "foreground";
+  const distantLayer = layerIsRearCanopy(layer);
   const sizeFactor = Math.max(0.72, Math.min(1.35, scale));
-  if (family === "grass" || leafType === "grassBlade") return rng.float(MIN_CONNECTOR_LENGTH, nearLayer ? 2.8 : 5.2) * sizeFactor;
-  if (family === "fern") return rng.float(2.5, nearLayer ? 8 : 12) * sizeFactor;
-  if (family === "podSpray" || leafType === "pod") return rng.float(3, nearLayer ? 10 : 15) * sizeFactor;
-  if (family === "vine") return rng.float(2, nearLayer ? 9 : 14) * sizeFactor;
-  return rng.float(2.5, nearLayer ? 11 : 16) * sizeFactor;
+  if (family === "grass" || leafType === "grassBlade") return rng.float(MIN_CONNECTOR_LENGTH, nearLayer ? 2.5 : distantLayer ? 4.2 : 5.2) * sizeFactor;
+  if (family === "fern") return rng.float(2, nearLayer ? 7 : distantLayer ? 9.5 : 12) * sizeFactor;
+  if (family === "podSpray" || leafType === "pod") return rng.float(2.5, nearLayer ? 8.5 : distantLayer ? 11 : 15) * sizeFactor;
+  if (family === "vine") return rng.float(1.8, nearLayer ? 7.5 : distantLayer ? 10 : 14) * sizeFactor;
+  return rng.float(2.2, nearLayer ? 9.5 : distantLayer ? 12 : 16) * sizeFactor;
 }
 
 function createFoliageFromAttachment(
@@ -858,7 +874,7 @@ function addSideBranches(graph: PlantGraph, mainStem: StemSegment, layer: LayerC
 }
 
 function addTreeBranches(graph: PlantGraph, mainStem: StemSegment, layer: LayerConfig, entryT: number, rng: Rng) {
-  const primaryCount = layer.key === "foreground" ? rng.int(2, 4) : rng.int(3, 4);
+  const primaryCount = layer.key === "foreground" || layer.key === "back" ? rng.int(2, 4) : rng.int(3, 4);
   const minT = Math.min(0.72, Math.max(entryT + 0.08, 0.2));
 
   for (let index = 0; index < primaryCount; index += 1) {
@@ -979,7 +995,7 @@ function addFoliage(graph: PlantGraph, layer: LayerConfig, family: PlantFamily, 
 
 function foliageScale(layer: LayerConfig, family: PlantFamily, rng: Rng) {
   const scale = rng.float(layer.leafScale[0], layer.leafScale[1]);
-  const densityScale = layer.key === "foreground" ? 0.82 : layer.key === "near" ? 0.86 : layer.key === "middle" ? 0.9 : layer.key === "far" ? 0.92 : 0.95;
+  const densityScale = layer.key === "foreground" ? 0.68 : layer.key === "near" ? 0.74 : layer.key === "middle" ? 0.82 : layer.key === "back" ? 0.86 : layer.key === "far" ? 0.88 : layer.key === "mist" ? 0.91 : 0.93;
   if (family === "grass" && (layer.key === "near" || layer.key === "foreground")) return scale * 0.56 * densityScale;
   if (family === "grass" && layer.key === "middle") return scale * 0.72 * densityScale;
   return scale * densityScale;
@@ -1109,7 +1125,7 @@ function createPlantGraph(
     graph.stems.push(mainStem);
 
     if (family === "grass") addGrassBlades(graph, mainStem, layer, graph.entryT, rng);
-    else if (family === "tree" && (layer.key === "middle" || layer.key === "near" || layer.key === "foreground")) addTreeBranches(graph, mainStem, layer, graph.entryT, rng);
+    else if (family === "tree" && (layer.key === "back" || layer.key === "middle" || layer.key === "near" || layer.key === "foreground")) addTreeBranches(graph, mainStem, layer, graph.entryT, rng);
     else addSideBranches(graph, mainStem, layer, family, graph.entryT, rng);
 
     addFoliage(graph, layer, family, graph.entryT, rng);
@@ -1131,31 +1147,37 @@ export function connectorSegment(start: Point, end: Point) {
 }
 
 function forcedSidesForLayer(layer: LayerConfig): EdgeSide[] {
-  if (layer.key === "foreground") return ["top", "bottom"];
+  if (layer.key === "foreground") return ["bottom"];
   if (layer.key === "near") return ["left", "right", "bottom"];
   if (layer.key === "middle") return ["top", "bottom"];
+  if (layer.key === "back") return ["left", "right"];
   return [];
 }
 
 function graphTotalForLayer(layer: LayerConfig, forcedSides: EdgeSide[], rng: Rng) {
   const sampledTotal = rng.int(layer.clusterCount[0], layer.clusterCount[1]);
-  if (layer.key === "mist") return sampledTotal + 4;
+  if (layer.key === "haze") return sampledTotal + 7;
+  if (layer.key === "mist") return sampledTotal + 5;
   if (layer.key === "far") return sampledTotal + 8;
-  const cappedTotal = layer.key === "foreground" ? Math.min(sampledTotal, 4) : layer.key === "near" ? Math.min(sampledTotal, 6) : layer.key === "middle" ? Math.min(sampledTotal, 6) : sampledTotal;
+  if (layer.key === "back") return sampledTotal + 6;
+  const cappedTotal = layer.key === "foreground" ? Math.min(sampledTotal, 4) : layer.key === "near" ? Math.min(sampledTotal, 6) : layer.key === "middle" ? Math.min(sampledTotal, 7) : sampledTotal;
   return Math.max(forcedSides.length, cappedTotal);
 }
 
 function targetPlannedGraphCount(layer: LayerConfig, graphTotal: number) {
   if (layer.key === "foreground") return Math.min(4, graphTotal);
   if (layer.key === "near") return Math.min(6, graphTotal);
-  if (layer.key === "middle") return Math.min(6, graphTotal);
+  if (layer.key === "middle") return Math.min(7, graphTotal);
+  if (layer.key === "back") return Math.min(7, graphTotal);
   return graphTotal;
 }
 
 export function densityTargetForLayer(layer: LayerConfig) {
-  if (layer.key === "mist") return layer.clusterCount[1] + 4;
+  if (layer.key === "haze") return layer.clusterCount[1] + 7;
+  if (layer.key === "mist") return layer.clusterCount[1] + 5;
   if (layer.key === "far") return layer.clusterCount[1] + 8;
-  if (layer.key === "middle") return 6;
+  if (layer.key === "back") return layer.clusterCount[1] + 6;
+  if (layer.key === "middle") return 7;
   if (layer.key === "near") return 6;
   if (layer.key === "foreground") return 4;
   return layer.clusterCount[1];
@@ -1172,8 +1194,8 @@ function centeredCoverCrop(crop: CropRect): CropRect {
 }
 
 function requiredOrganismCount(preset: ScenePreset, rng: Rng) {
-  if (preset.name === "dense") return rng.int(9, 11);
-  return rng.int(8, 10);
+  if (preset.name === "dense") return rng.int(11, 13);
+  return rng.int(10, 12);
 }
 
 function chooseOpeningMode(rng: Rng): OpeningMode {
@@ -1273,14 +1295,15 @@ export function createLayerPlantGraphs(layer: LayerConfig, light: LightZone, cro
   const graphTotal = graphTotalForLayer(layer, forcedSides, rng);
   const centerCrop = centeredCoverCrop(crop);
   const graphs: ValidatedPlantGraph[] = [];
-  const plannedOrganisms = organismPlan?.organisms.filter((organism) => organism.layerKeys.includes(layer.key) && layerSupportsFamily(layer, organism.family)) ?? [];
+  const matchingPlannedOrganisms = organismPlan?.organisms.filter((organism) => organism.layerKeys.includes(layer.key) && layerSupportsFamily(layer, organism.family)) ?? [];
+  const plannedOrganisms = layer.key === "foreground" ? matchingPlannedOrganisms.slice(0, targetPlannedGraphCount(layer, graphTotal)) : matchingPlannedOrganisms;
 
   plannedOrganisms.forEach((organism, index) => {
     const graph = createPlantGraph(`canopy-${layer.key}-${organism.id}-${index}`, rng, layer, light, crop, centerCrop, organism.side, organism, organismPlan?.openingMode);
     if (graph) graphs.push(graph);
   });
 
-  if (organismPlan && (layer.key === "middle" || layer.key === "near" || layer.key === "foreground")) {
+  if (organismPlan && (layer.key === "back" || layer.key === "middle" || layer.key === "near" || layer.key === "foreground")) {
     const targetGraphCount = targetPlannedGraphCount(layer, graphTotal);
     let rescueAttempt = 0;
     while (graphs.length < targetGraphCount && rescueAttempt < 48) {
@@ -1288,9 +1311,9 @@ export function createLayerPlantGraphs(layer: LayerConfig, light: LightZone, cro
       const missingSide = (["top", "right", "bottom", "left"] as const).find((side) => !currentSides.has(side));
       const side = missingSide ?? organismPlan.coverageSlots[rescueAttempt % organismPlan.coverageSlots.length] ?? forcedSides[rescueAttempt % forcedSides.length] ?? rng.weighted(fallbackCoverageWeights());
       const needsTree = organismPlan.treeSilhouetteTarget > 0 && layerSupportsFamily(layer, "tree") && !graphs.some((graph) => graph.family === "tree");
-      const family = needsTree && rescueAttempt % 3 === 0 ? "tree" : rng.weighted(layer.key === "foreground" || layer.key === "near" || layer.key === "middle" ? [
+      const family = needsTree && rescueAttempt % 3 === 0 ? "tree" : rng.weighted(layer.key === "foreground" || layer.key === "near" || layer.key === "middle" || layer.key === "back" ? [
         ...layer.plantFamilies,
-        ...(layerSupportsFamily(layer, "tree") ? [{ value: "tree" as const, weight: layer.key === "middle" ? 1.1 : 1.6 }] : [])
+        ...(layerSupportsFamily(layer, "tree") ? [{ value: "tree" as const, weight: layer.key === "back" ? 0.9 : layer.key === "middle" ? 1.1 : 1.6 }] : [])
       ] : layer.plantFamilies);
       const organism: PlannedOrganism = {
         id: `organism-${layer.key}-rescue-${graphs.length}-${rescueAttempt}`,
@@ -1304,7 +1327,7 @@ export function createLayerPlantGraphs(layer: LayerConfig, light: LightZone, cro
       rescueAttempt += 1;
     }
 
-    if (organismPlan.treeSilhouetteTarget > 0 && layerSupportsFamily(layer, "tree") && !graphs.some((graph) => graph.family === "tree")) {
+    if (organismPlan.treeSilhouetteTarget > 0 && layerSupportsFamily(layer, "tree") && !graphs.some((graph) => graph.family === "tree") && graphs.length < targetGraphCount) {
       let treeAttempt = 0;
       while (treeAttempt < 36 && !graphs.some((graph) => graph.family === "tree")) {
         const side = organismPlan.coverageSlots[treeAttempt % organismPlan.coverageSlots.length] ?? rng.weighted(fallbackCoverageWeights());

@@ -1,7 +1,7 @@
 ---
 title: "Trax"
 slug: "trax"
-subtitle: "Discrete and non-invasive chronic disease prevention."
+subtitle: "Discreet and non-invasive chronic disease prevention."
 projectId: 6
 completed: "2025-05"
 thumbnail: "./thumbnail.png"
@@ -32,8 +32,8 @@ info:
 portfolioLink: true
 ---
 
-Trax is a concept for discreet, non-invasive glucose monitoring and health tracking designed to support holistic wellness for people in urban environments.
+Trax is a concept for discreet, non-invasive glucose monitoring and health tracking, built to support everyday wellness for people living in cities.
 
-By passively tracking biomarkers and insulin response during sedentary moments, especially after meals, the insole encourages light activity through subtle prompts to help users naturally regulate their blood sugar levels.
+Worn as an insole, it passively senses biomarkers and insulin response during sedentary moments, especially after meals, and nudges the wearer toward light activity through subtle prompts that help regulate blood sugar naturally.
 
-The project prioritized dignity, routine, and future-ready health insights, aiming to stop preventative care from feeling clinical and invasive.
+I designed it around dignity and routine rather than clinical intervention, so preventative care could fold quietly into daily life instead of interrupting it.

@@ -29,8 +29,8 @@ info:
 portfolioLink: false
 ---
 
-Glo-Kit was a second-year university project developed from a collaborative brief with a major toy manufacturer.
+Glo-Kit was a second-year project developed from a collaborative brief with a major toy manufacturer.
 
-I was inspired by the use of retroreflectors for visual effects in films like Tron and Star Wars, and wanted to turn that material behavior into a set of building blocks for kids to make their own games. My response was a modular kit that could be configured in different ways, with retroreflective surfaces creating a video-game-like glow.
+I was drawn to how retroreflective materials were used for visual effects in films like Tron and Star Wars, and wanted to turn that material behavior into building blocks kids could use to invent their own games. My response was a modular kit that reconfigures in different ways, its retroreflective surfaces producing a video-game-like glow.
 
-There was also an accompanying headset design that housed flashlights pointing parallel with the user’s eyes that would cause the glowing effect of the play pieces.
+A companion headset houses small flashlights aligned with the wearer's line of sight, which is what makes the pieces light up.

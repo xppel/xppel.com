@@ -1,7 +1,7 @@
 ---
 title: "InPulse (Live)"
 slug: "inpulse-(live)"
-subtitle: "Adaptive music production & performance device."
+subtitle: "Adaptive production and performance instrument."
 projectId: 7
 completed: "2025-05"
 thumbnail: "./thumbnail.png"
@@ -38,8 +38,8 @@ info:
 portfolioLink: true
 ---
 
-InPulse (Live) was the final project of my undergraduate degree. It was selected for exhibition at Europe’s largest graduate design showcase, New Designers, in 2025.
+InPulse (Live) was my final undergraduate project, selected for exhibition at New Designers, Europe's largest graduate design showcase, in 2025.
 
-My aim was to design a hardware system for live electronic music production and performance, integrating sequencing, mixing, and sound design into one playable interface.
+I set out to design a single playable instrument for live electronic music, folding sequencing, mixing, and sound design into one interface you perform with rather than configure.
 
-I built a functional prototype using a Raspberry Pi and a custom embedded MCU MIDI control interface, alongside an accurate visual model and PCB designs for the hardware architecture.
+I built a functional prototype around a Raspberry Pi and a custom embedded MCU MIDI controller, alongside a detailed visual model and PCB designs for the hardware architecture.

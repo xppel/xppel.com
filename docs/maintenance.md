@@ -43,9 +43,11 @@ Important fields:
 - `taxonomy`: Filter/search categories.
 - `info`: Project location/client and notes.
 - `gallery`: Optional additional images, videos, YouTube embeds, or GIFs. These are shown in the project media carousel.
-- `portfolioLink`: Shows the portfolio PDF sentence on the project page.
+- `portfolioLink`: Shows the portfolio PDF sentence on the project page. Preserve this field during copy edits unless the project page should intentionally gain or lose the PDF sentence.
 
 Keep project images next to the project entry so Astro can validate and optimize them.
+
+When editing project copy, update the Markdown body and `subtitle` only unless metadata really changed. As of the current portfolio set, InPulse (Live), Trax, and Ripple keep `portfolioLink: true`; FlipGrip, Party Piece, Glo-Kit, and Dualith keep `portfolioLink: false`.
 
 When adding a new project, use the next highest `projectId`. The desktop nav year dividers are generated from `completed`, so a new year appears automatically when needed.
 
@@ -175,7 +177,9 @@ Site navigation is enhanced in `src/scripts/site.ts`:
 - External links, downloads, file links, modifier-clicks, hash-only jumps, and failed fetches fall back to normal browser navigation.
 - `xppel:page-load` fires after the initial load and after enhanced swaps so page initializers can re-bind idempotently.
 
-Nav labels use `.nav-stable-link` plus `data-nav-label` to reserve the bold active-label width. This keeps desktop side-nav arrows and neighboring mobile quick links from moving when the active page becomes heavier.
+Nav labels use `.nav-stable-link` plus `data-nav-label` to reserve the bold active-label width and keep icons in a fixed first column. Apply that structure to desktop links, mobile quick links, and mobile menu links so arrows do not move when the active page becomes heavier.
+
+The global nav intentionally omits the Email link. Keep email contact available on the About page contact links instead.
 
 The skip-to-content link was removed intentionally because it appeared visually during normal browsing. Keep `main#main` in place for landmarks and page swaps.
 
@@ -190,13 +194,14 @@ Implementation notes:
 - A small head boot script reads URL/session state and sets initial project index view/size attributes before first paint.
 - CSS mirrors those attributes so the selected view and size are applied before JavaScript hydration finishes.
 - Hydrated controls remain the source of truth after load and after app-style navigation swaps.
+- Session storage is the persistence boundary for view/size/search/filter state; do not switch to cross-session storage unless that behavior is explicitly requested.
 - Mobile grid sizes are fixed as `S = 4`, `M = 3`, and `L = 2` columns.
 - Mobile list view uses larger images than desktop list view.
 - Mobile list size `S` hides summary text.
 - Mobile list sizes `M` and `L` let summaries fill remaining text-column height, so larger frames naturally show more text.
 - Tags are kept to one compact visual line on mobile.
 
-When changing project index controls, verify there is no visible size/view flicker on direct `/projects/` loads or when navigating back to `/projects/` through app-style navigation.
+When changing project index controls, verify there is no visible size/view flicker on direct `/projects/` loads or when navigating back to `/projects/` through app-style navigation. In particular, switching to list mode, leaving the page, and returning during the same session should stay in list mode immediately and after hydration settles.
 
 ## Lightbox
 
@@ -210,8 +215,8 @@ Implementation notes:
 
 - Opening starts immediately from the clicked thumbnail/current image rect.
 - The clicked thumbnail is used as the first visible placeholder while the full image decodes in the background.
-- The lightbox frame gets image-specific aspect-ratio CSS variables before the full image swaps in, so fullscreen photos do not grow or snap after loading.
-- When the full image is ready, it swaps into the same frame.
+- On open, the lightbox frame gets image-specific aspect-ratio CSS variables before the full image swaps in, so fullscreen photos do not grow or snap after loading.
+- During next/previous navigation, the current image fades out before the source and frame aspect ratio change, then the new image fades back in. Do not update the visible frame dimensions mid-fade.
 - Closing animates back to the triggering image rect and fades the backdrop before hiding the lightbox.
 - Escape closes without restoring a visible blue focus ring.
 - Horizontal swipes move between lightbox items when multiple images are available.

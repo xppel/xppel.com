@@ -681,7 +681,7 @@ async function navigateApp(url: URL, replace = false) {
 
     const swap = () => {
       const importedMain = document.importNode(nextMain, true);
-      prepareImportedProjectIndex(importedMain);
+      prepareImportedProjectIndex(importedMain, url);
       currentMain.replaceWith(importedMain);
       if (nextTitle) document.title = nextTitle;
       if (nextDescription) {
@@ -914,8 +914,8 @@ function preloadAdjacentLightboxImages(index: number) {
 async function swapLightboxImage(lightboxImage: HTMLImageElement, item: HTMLAnchorElement, token: number) {
   const decoded = await decodeImage(item.href);
   if (token !== lightboxLoadToken) return;
-  applyLightboxFrame(item, decoded);
   if (motionQuery.matches) {
+    applyLightboxFrame(item, decoded);
     lightboxImage.src = decoded.src;
     preloadAdjacentLightboxImages(activeLightboxIndex);
     return;
@@ -923,7 +923,10 @@ async function swapLightboxImage(lightboxImage: HTMLImageElement, item: HTMLAnch
   lightboxImage.classList.add("is-loading");
   await waitForOpacityTransition(lightboxImage, 180);
   if (token !== lightboxLoadToken) return;
+  applyLightboxFrame(item, decoded);
   lightboxImage.src = decoded.src;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  if (token !== lightboxLoadToken) return;
   lightboxImage.classList.remove("is-loading");
   preloadAdjacentLightboxImages(activeLightboxIndex);
 }
@@ -1132,9 +1135,10 @@ function readProjectIndexBootstrap() {
   return (window as ProjectIndexWindow).__xppelProjectIndexState ?? {};
 }
 
-function getProjectIndexInitialShellState(root?: HTMLElement | null) {
+function getProjectIndexInitialShellState(root?: HTMLElement | null, pathname = window.location.pathname) {
   const stored = readProjectIndexStorage();
   const bootstrap = readProjectIndexBootstrap();
+  const isProjectIndexPath = normalizePath(pathname) === PROJECT_INDEX_PATH;
   const rootView = isProjectIndexView(root?.getAttribute("data-view")) ? root?.getAttribute("data-view") as ProjectIndexState["view"] : undefined;
   const rootSize = isProjectIndexSize(root?.getAttribute("data-size")) ? root?.getAttribute("data-size") as ProjectIndexState["size"] : undefined;
   const bootstrapView = isProjectIndexView(bootstrap.view) ? bootstrap.view : undefined;
@@ -1143,22 +1147,25 @@ function getProjectIndexInitialShellState(root?: HTMLElement | null) {
   const storedSize = isProjectIndexSize(stored.size) ? stored.size : undefined;
 
   return {
-    view: rootView ?? (normalizePath(window.location.pathname) === PROJECT_INDEX_PATH ? bootstrapView : undefined) ?? storedView ?? defaultProjectIndexView(),
-    size: rootSize ?? (normalizePath(window.location.pathname) === PROJECT_INDEX_PATH ? bootstrapSize : undefined) ?? storedSize ?? "m"
+    view: (isProjectIndexPath ? bootstrapView ?? storedView : undefined) ?? rootView ?? defaultProjectIndexView(),
+    size: (isProjectIndexPath ? bootstrapSize ?? storedSize : undefined) ?? rootSize ?? "m"
   };
 }
 
 function syncProjectIndexShell(root: HTMLElement, state = getProjectIndexInitialShellState(root)) {
   root.setAttribute("data-view", state.view);
   root.setAttribute("data-size", state.size);
+  document.documentElement.dataset.projectIndexView = state.view;
+  document.documentElement.dataset.projectIndexSize = state.size;
+  (window as ProjectIndexWindow).__xppelProjectIndexState = { view: state.view, size: state.size };
   root.querySelectorAll("[data-view-mode]").forEach((button) => {
     button.setAttribute("aria-pressed", String(button.getAttribute("data-view-mode") === state.view));
   });
 }
 
-function prepareImportedProjectIndex(main: HTMLElement) {
+function prepareImportedProjectIndex(main: HTMLElement, url = new URL(window.location.href)) {
   const root = main.querySelector("[data-projects-index]");
-  if (root instanceof HTMLElement) syncProjectIndexShell(root, getProjectIndexInitialShellState(root));
+  if (root instanceof HTMLElement) syncProjectIndexShell(root, getProjectIndexInitialShellState(root, url.pathname));
 }
 
 function initProjectsIndex() {

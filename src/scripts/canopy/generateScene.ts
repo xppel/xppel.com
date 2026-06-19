@@ -1,4 +1,4 @@
-import { appendLayerClusters } from "./clusters";
+import { appendAtmosphericVeil, appendLayerClusters } from "./clusters";
 import { createLeafDefinitions } from "./leafPaths";
 import { createSceneOrganismPlan } from "./plantGraph";
 import type { CanopyPresetName, CropRect } from "./presets";
@@ -28,6 +28,9 @@ type CanopyElement = HTMLElement & {
     visibleCropHeight?: string;
     organismCount?: string;
     openingMode?: string;
+    depthLayerCount?: string;
+    atmosphereVeilNodeCount?: string;
+    atmosphereVeilBandCount?: string;
   };
 };
 
@@ -192,6 +195,12 @@ export function mountCanopyArtwork(root: CanopyElement) {
   background.setAttribute("fill", "#000");
   svg.append(background);
 
+  const atmosphereAudit = appendAtmosphericVeil(documentRef, svg, preset.light, crop, rng);
+  const depthLayerCount = preset.layerConfigs.filter((layer) => layer.key === "haze" || layer.key === "back").length;
+  svg.dataset.depthLayerCount = String(depthLayerCount);
+  svg.dataset.atmosphereVeilNodeCount = String(atmosphereAudit.veilNodeCount);
+  svg.dataset.atmosphereVeilBandCount = String(atmosphereAudit.veilBandCount);
+
   preset.layerConfigs.forEach((layer) => {
     const layerGroup = createSvgElement(documentRef, "g");
     layerGroup.classList.add("canopy-layer", `canopy-layer-${layer.key}`);
@@ -204,6 +213,9 @@ export function mountCanopyArtwork(root: CanopyElement) {
   root.dataset.resolvedSeed = seed;
   root.dataset.organismCount = String(organismPlan.organisms.length);
   root.dataset.openingMode = organismPlan.openingMode;
+  root.dataset.depthLayerCount = String(depthLayerCount);
+  root.dataset.atmosphereVeilNodeCount = String(atmosphereAudit.veilNodeCount);
+  root.dataset.atmosphereVeilBandCount = String(atmosphereAudit.veilBandCount);
   recordCropDataset(root, crop, visibleCrop);
   clearCanopy(root);
   root.append(svg);
